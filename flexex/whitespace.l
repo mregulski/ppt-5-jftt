@@ -1,11 +1,16 @@
     int words = 0;
-    int lines = 0;
+    int lines = 1;
+w [:blank:]
+nw [[:alnum:][:punct:]]
 %%
-^[ \t]+
-[ \t]+$
-\r?\n                   lines++;
-[ \t]+                  printf(" ");  words++;
-(\r?\n)*[ \t]*(\r?\n)+  printf("\n"); words++; lines++;
+
+^{nw}+		words++; ECHO;
+{nw}+		words++; ECHO;
+
+^[ \t]*\r?\n			
+[ \t]+				printf(" ");
+\r?\n	lines++; ECHO;
+
 %%
 main() {
     yylex();
