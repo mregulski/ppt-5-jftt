@@ -1,0 +1,17 @@
+#line 890 "c_comment.c"
+
+	case YY_END_OF_BUFFER:
+		{
+		/* Amount of text matched not including the EOB char. */
+		int yy_amount_of_matched_text = (int) (yy_cp - (yytext_ptr)) - 1;
+
+        #line 890 "c_comment.c"
+
+	case YY_END_OF_BUFFER:
+		{
+		/* Amount of text matched not including the EOB char. */
+		int yy_amount_of_matched_text = (int) (yy_cp - (yytext_ptr)) - 1;
+
+        
+        void *yyrealloc  (void * ptr, yy_size_t  size )
+        

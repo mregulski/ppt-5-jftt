@@ -48,7 +48,7 @@
 %x error
 %%
 
--?{number}		{ push(atoi(yytext));  }
+-?[0-9]+		{ push(atoi(yytext));  }
 "+"				{ push(pop() + pop()); }
 "-"				{ 
 					int sub = pop(); 

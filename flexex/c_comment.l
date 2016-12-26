@@ -10,10 +10,12 @@ star 	[*]
 %x comment_doc_multi
 
 %%
-\"						BEGIN(string); ECHO;
-<string>.				ECHO;
+\"						BEGIN(string); printf("BEGIN_STR"); ECHO;
+<string>{bslash}{nl}    ECHO;
 <string>{bslash}\"		ECHO;
-<string>[^{bslash}]\"	ECHO; BEGIN(INITIAL);
+
+<string>\"              ECHO; printf("END STR"); BEGIN(INITIAL);
+<string>.				ECHO;
 
 {slash}{3}						BEGIN(comment_doc); ECHO;
 <comment_doc>.*{bslash}{nl}		ECHO;
