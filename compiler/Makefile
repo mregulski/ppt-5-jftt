@@ -1,11 +1,12 @@
 OUT_DIR=./out
-COMPILE=g++ -std=c++11
+COMPILE=clang++ -std=c++11 -Wno-deprecated-register
 
-debug: DEBUG=-DPRINT=1 -DYYDEBUG=1
+debug: DEBUG= -g
 debug: clean parser
 
 parser: clean lex grammar
-	$(COMPILE) $(OUT_DIR)/lex.yy.c $(OUT_DIR)/grammar.tab.c main.cpp -o $(OUT_DIR)/parser -lfl $(DEBUG)
+	cp *.h $(OUT_DIR)/
+	$(COMPILE) $(OUT_DIR)/lex.yy.c $(OUT_DIR)/grammar.tab.c *.cpp -o $(OUT_DIR)/parser -lfl $(DEBUG)
 
 lex: out_dir
 lex: lex.l

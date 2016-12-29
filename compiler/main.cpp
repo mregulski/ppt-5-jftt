@@ -1,9 +1,17 @@
 #include <iostream>
-#define YYDEBUG 0
+#include <unordered_map>
+#include "main.h"
+#include "symtable.h"
+#ifndef YYDEBUG
+# define YYDEBUG 0
+#endif
 extern int yyparse();
 extern int yydebug;
+SymTable symbols;
+using namespace std;
 
 int main() {
+
     yydebug = YYDEBUG;
     int result = yyparse();
     if (result) {
@@ -13,3 +21,6 @@ int main() {
     }
     return result;
 }
+
+
+

@@ -1,7 +1,10 @@
 %{
     #include <iostream>
     #include <string>
+    #include "main.h"
+    #include "symtable.h"
     extern int yylineno;
+    extern SymTable symbols;
     extern "C" int yylex();
 
     void yyerror(const char *s) {
@@ -21,11 +24,11 @@
 %left PLUS MINUS
 %left MULT DIV MOD
 
+%define parse.error verbose
 %define parse.trace
-
 %union {
     int token;
-    std::string *text;
+    char *text;
     int val;
 }
 
@@ -33,12 +36,16 @@
 %%
 
 program:
-        VAR vdeclarations KEY_BEGIN commands KEY_END
+        VAR
+            vdeclarations
+        KEY_BEGIN
+            commands
+        KEY_END
     ;
 
 vdeclarations:
-        vdeclarations PIDENTIFIER
-    |   vdeclarations PIDENTIFIER BRACKET_OPEN NUM BRACKET_CLOSE
+        vdeclarations PIDENTIFIER { symbols.declare($2, 0); }
+    |   vdeclarations PIDENTIFIER BRACKET_OPEN NUM BRACKET_CLOSE { symbols.declare($2, $4); }
     |
     ;
 
@@ -48,7 +55,7 @@ commands:
     ;
 
 command:
-        identifier ASSIGN expression ENDSTMT
+        identifier ASSIGN expression ENDSTMT {}
     |   IF condition THEN commands ELSE commands ENDIF
     |   WHILE condition DO commands ENDWHILE
     |   FOR PIDENTIFIER FROM value TO value DO commands ENDFOR
