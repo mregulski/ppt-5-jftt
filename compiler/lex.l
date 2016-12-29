@@ -1,19 +1,15 @@
 %option noyywrap
 %option yylineno
 %{
-    #include <string>
+    // #include <string.h>
+    #include "main.h"
     #include "grammar.tab.h"
-    // #ifdef PRINT
-    //     #define TOKEN(t) printf("%s", yytext); return (yylval.token = t);
-    //     #define SAVE_TOKEN printf("%s", yytext); yylval.text = new std::string(yytext, yyleng);
-    //     #define SAVE_INT printf("%s", yytext); yylval.val = strtoll(yytext, NULL, 10);
-    // #else
-        #define TOKEN(t) return (yylval.token = t)
-        #define SAVE_TOKEN yylval.text = new std::string(yytext, yyleng)
-        #define SAVE_INT yylval.val = strtoll(yytext, NULL, 10);
-    // #endif
 
-    extern "C" int yylex();
+    #define TOKEN(t) return (yylval.token = t)
+    #define SAVE_INT yylval.val = strtoll(yytext, NULL, 10)
+
+
+    // extern int yylex(YYSTYPE *lvalp, YYLTYPE *llocp);
 %}
 
 %x COMMENT
@@ -21,7 +17,11 @@
 "{"             BEGIN(COMMENT);
 <COMMENT>"}"    BEGIN(INITIAL);
 <COMMENT>.      ;
-[_a-z]+         { SAVE_TOKEN; return PIDENTIFIER; }
+[_a-z]+         {
+                    yylval.text = (char *) malloc(yyleng * sizeof(char) + 1);
+                    strcpy(yylval.text, yytext);
+                    return PIDENTIFIER;
+                }
 [0-9]+          { SAVE_INT; return NUM; }
 "-"             { TOKEN(MINUS); }
 "+"             { TOKEN(PLUS); }
@@ -57,6 +57,6 @@
 "["             { TOKEN(BRACKET_OPEN); }
 "]"             { TOKEN(BRACKET_CLOSE); }
 "\n"            { /* allow yylineno to update */ }
-[ \t]           ;
+[ \t\n]+        ;
 .               ;
 %%

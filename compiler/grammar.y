@@ -1,13 +1,21 @@
+%locations
+%define parse.error verbose
+%define parse.trace
 %{
-    #include <iostream>
-    #include <string>
+    #include "main.h"
+    #include "symtable.h"
+    #include <unordered_map>
+    #include <vector>
     extern int yylineno;
-    extern "C" int yylex();
-
+    extern int yylex();
+    bool ERROR = false;
     void yyerror(const char *s) {
-        std::cerr << "[" << yylineno << "] ERROR: " << s << std::endl;
+        fprintf(stderr, "[%d] ERROR: %s\n", yylineno-1, s);
     }
+    extern Node *root;
+    extern SymTable symbols;
 %}
+
 %token <text> PIDENTIFIER
 %token <val> NUM
 %token <token> BRACKET_OPEN BRACKET_CLOSE
@@ -21,69 +29,96 @@
 %left PLUS MINUS
 %left MULT DIV MOD
 
-%define parse.trace
-
 %union {
-    int token;
-    std::string *text;
+    char *text;
     int val;
+    int token;
+    Node *node;
 }
-
+%type <node> program vdeclarations commands command expression condition value identifier
 %start program
 %%
 
 program:
-        VAR vdeclarations KEY_BEGIN commands KEY_END
+        VAR vdeclarations KEY_BEGIN commands KEY_END {
+             root = create_block_node(N_PROGRAM);
+             add_child(root, $2);
+             add_child(root, $4);
+             register_node(root);
+        }
     ;
 
 vdeclarations:
-        vdeclarations PIDENTIFIER
-    |   vdeclarations PIDENTIFIER BRACKET_OPEN NUM BRACKET_CLOSE
-    |
+        vdeclarations PIDENTIFIER {
+            Node *id = create_decl_node($2);
+            symbols.declare_var(id->name);
+            id = register_node(id);
+            add_child($1, id);
+
+        }
+    |   vdeclarations PIDENTIFIER BRACKET_OPEN NUM BRACKET_CLOSE {
+            Node *id = create_decl_node($2);
+            symbols.declare_arr(id->name, $4);
+            id = register_node(id);
+            add_child($1, id);
+        }
+    |   { Node *decls = create_block_node(N_DECLS); $$ = register_node(decls); }
     ;
 
 commands:
-        commands command
-    |   command
+        commands command { add_child($1, $2); }
+    |   command {
+            Node *cmds = create_block_node(N_BLOCK);
+            add_child(cmds, $1);
+            $$ = register_node(cmds);
+            }
     ;
 
 command:
-        identifier ASSIGN expression ENDSTMT
-    |   IF condition THEN commands ELSE commands ENDIF
-    |   WHILE condition DO commands ENDWHILE
-    |   FOR PIDENTIFIER FROM value TO value DO commands ENDFOR
-    |   FOR PIDENTIFIER FROM value DOWNTO value DO commands ENDFOR
-    |   READ identifier ENDSTMT
-    |   WRITE value ENDSTMT
-    |   SKIP ENDSTMT
+        identifier ASSIGN expression ENDSTMT { $$ = register_node(create_op2_node(N_ASSIGN, $1, $3)); }
+    |   IF condition THEN commands ELSE commands ENDIF { $$ = register_node(create_op3_node(N_IF, $2, $4, $6)); }
+    |   WHILE condition DO commands ENDWHILE { $$ = register_node(create_op2_node(N_WHILE, $2, $4)); }
+    |   FOR PIDENTIFIER FROM value TO value DO commands ENDFOR {
+            Node *idnode = register_node(create_id_node($2));
+            $$ = register_node(create_op4_node(N_FOR, idnode, $4, $6, $8));
+        }
+    |   FOR PIDENTIFIER FROM value DOWNTO value DO commands ENDFOR {
+            Node *idnode = register_node(create_id_node($2));
+            $$ = register_node(create_op4_node(N_FOR, idnode, $4, $6, $8));
+        }
+    |   READ identifier ENDSTMT { $$ = register_node(create_op1_node(N_READ, $2)); }
+    |   WRITE value ENDSTMT { $$ = register_node(create_op1_node(N_WRITE, $2)); }
+    |   SKIP ENDSTMT { $$ = register_node(create_node(N_SKIP)); }
     ;
 
 expression:
-        value
-    |   value PLUS value
-    |   value MINUS value
-    |   value MULT value
-    |   value DIV value
-    |   value MOD value
+        value { $$ = $1; }
+    |   value PLUS value    { $$ = register_node(create_op2_node(N_PLUS, $1, $3));  }
+    |   value MINUS value   { $$ = register_node(create_op2_node(N_MINUS, $1, $3)); }
+    |   value MULT value    { $$ = register_node(create_op2_node(N_MULT, $1, $3));  }
+    |   value DIV value     { $$ = register_node(create_op2_node(N_DIV, $1, $3));   }
+    |   value MOD value     { $$ = register_node(create_op2_node(N_MOD, $1, $3));   }
     ;
 
 condition:
-        value REL_EQ value
-    |   value REL_NEQ value
-    |   value REL_GT value
-    |   value REL_LT value
-    |   value REL_LEQ value
-    |   value REL_GEQ value
+        value REL_EQ value  { $$ = register_node(create_op2_node(N_CEQ, $1, $3)); }
+    |   value REL_NEQ value { $$ = register_node(create_op2_node(N_CNEQ, $1, $3)); }
+    |   value REL_GT value  { $$ = register_node(create_op2_node(N_CGT, $1, $3)); }
+    |   value REL_LT value  { $$ = register_node(create_op2_node(N_CLT, $1, $3)); }
+    |   value REL_LEQ value { $$ = register_node(create_op2_node(N_CLEQ, $1, $3)); }
+    |   value REL_GEQ value { $$ = register_node(create_op2_node(N_CGEQ, $1, $3)); }
     ;
 
 value:
-        NUM
-    |   identifier
+        NUM { $$ = register_node(create_value_node($1)); }
+    |   identifier { $$ = $1; }
     ;
 
 identifier:
-        PIDENTIFIER
-    |   PIDENTIFIER BRACKET_OPEN PIDENTIFIER BRACKET_CLOSE
-    |   PIDENTIFIER BRACKET_OPEN NUM BRACKET_CLOSE
+        PIDENTIFIER {
+             $$ = register_node(create_id_node($1));
+         }
+    |   PIDENTIFIER BRACKET_OPEN PIDENTIFIER BRACKET_CLOSE { $$ = create_id_node((char *) "arr[id]"); }
+    |   PIDENTIFIER BRACKET_OPEN NUM BRACKET_CLOSE { $$ = create_id_node((char *) "arr[num]"); }
     ;
 %%

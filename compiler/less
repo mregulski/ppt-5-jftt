@@ -1,0 +1,43 @@
+grammar.y:46.6: ostrzeżenie: pusta reguła i brak akcji dla symbolu nieterminalnego z określeniem typu [-Wother]
+     |
+      ^
+grammar.y:62.9-20: ostrzeżenie: konflikt typu w domyślnej akcji: <node> != <token> [-Wother]
+     |   SKIP ENDSTMT
+         ^^^^^^^^^^^^
+grammar.y:90.9-58: ostrzeżenie: konflikt typu w domyślnej akcji: <node> != <text> [-Wother]
+     |   PIDENTIFIER BRACKET_OPEN PIDENTIFIER BRACKET_CLOSE
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+grammar.y:91.9-50: ostrzeżenie: konflikt typu w domyślnej akcji: <node> != <text> [-Wother]
+     |   PIDENTIFIER BRACKET_OPEN NUM BRACKET_CLOSE
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+In file included from lex.l:5:0:
+grammar.y:33:5: error: unknown type name ‘Node’
+     Node *node;
+     ^
+In file included from grammar.y:2:0:
+./out/main.h:30:46: error: expected ‘:’, ‘,’, ‘;’, ‘}’ or ‘__attribute__’ before ‘count’
+         struct { struct _Node **list, size_t count} children;
+                                              ^
+In file included from main.c:2:0:
+main.h:30:46: error: expected ‘:’, ‘,’, ‘;’, ‘}’ or ‘__attribute__’ before ‘count’
+         struct { struct _Node **list, size_t count} children;
+                                              ^
+main.c: In function ‘create_node’:
+main.c:26:13: error: ‘nchildren’ undeclared (first use in this function)
+             nchildren = 1;
+             ^
+main.c:26:13: note: each undeclared identifier is reported only once for each function it appears in
+main.c:38:17: error: expected ‘:’ before ‘{’ token
+         default {
+                 ^
+main.c:44:22: error: ‘struct <anonymous>’ has no member named ‘count’
+         node.children.count = nchildren;
+                      ^
+main.c:47:5: warning: function returns address of local variable [-Wreturn-local-addr]
+     return &node;
+     ^
+main.c: In function ‘create_value_node’:
+main.c:54:5: warning: function returns address of local variable [-Wreturn-local-addr]
+     return &node;
+     ^
+make: *** [parser] Błąd 1
