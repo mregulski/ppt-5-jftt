@@ -2,8 +2,8 @@
 %define parse.error verbose
 %define parse.trace
 %{
-    #include "main.h"
-    #include "symtable.h"
+    #include "SymTable.h"
+    #include "Node.h"
     #include <unordered_map>
     #include <vector>
     extern int yylineno;
@@ -33,92 +33,96 @@
     char *text;
     int val;
     int token;
-    Node *node;
+    Program *prog;
+    Declarations *decl;
+    Commands *cmds;
+    Command *cmd;
+    Id *id;
+    Value *value;
+    Condition *cond;
+    Expression *expr;
+
 }
-%type <node> program vdeclarations commands command expression condition value identifier
+%type <prog> program
+%type <decl> vdeclarations
+%type <cmds> commands
+%type <cmd> command
+%type <expr> expression
+%type <cond> condition
+%type <value> value
+%type <id> identifier
 %start program
 %%
 
 program:
         VAR vdeclarations KEY_BEGIN commands KEY_END {
-             root = create_block_node(N_PROGRAM);
-             add_child(root, $2);
-             add_child(root, $4);
-             register_node(root);
+            $$ = new Program($2, $4);
+            root = $$;
         }
     ;
 
 vdeclarations:
         vdeclarations PIDENTIFIER {
-            Node *id = create_decl_node($2);
-            symbols.declare_var(id->name);
-            id = register_node(id);
-            add_child($1, id);
-
+            $1->declare(new Var($2, yylineno));
         }
     |   vdeclarations PIDENTIFIER BRACKET_OPEN NUM BRACKET_CLOSE {
-            Node *id = create_decl_node($2);
-            symbols.declare_arr(id->name, $4);
-            id = register_node(id);
-            add_child($1, id);
+            $1->declare(new ConstArray($2, $4, yylineno));
         }
-    |   { Node *decls = create_block_node(N_DECLS); $$ = register_node(decls); }
+    |   { $$ = new Declarations(); }
     ;
 
 commands:
-        commands command { add_child($1, $2); }
+        commands command { $1->add_command($2); }
     |   command {
-            Node *cmds = create_block_node(N_BLOCK);
-            add_child(cmds, $1);
-            $$ = register_node(cmds);
+            $$ = new Commands();
+            $$->add_command($1);
             }
     ;
 
 command:
-        identifier ASSIGN expression ENDSTMT { $$ = register_node(create_op2_node(N_ASSIGN, $1, $3)); }
-    |   IF condition THEN commands ELSE commands ENDIF { $$ = register_node(create_op3_node(N_IF, $2, $4, $6)); }
-    |   WHILE condition DO commands ENDWHILE { $$ = register_node(create_op2_node(N_WHILE, $2, $4)); }
+        identifier ASSIGN expression ENDSTMT { $$ = new Assign($1, $3); }
+    |   IF condition THEN commands ELSE commands ENDIF { $$ = new If($2, $4, $6); }
+    |   WHILE condition DO commands ENDWHILE { $$ = new While($2, $4); }
     |   FOR PIDENTIFIER FROM value TO value DO commands ENDFOR {
-            Node *idnode = register_node(create_id_node($2));
-            $$ = register_node(create_op4_node(N_FOR, idnode, $4, $6, $8));
+            $$ = new For(new Var($2, yylineno), $4, $6, $8, false);
         }
     |   FOR PIDENTIFIER FROM value DOWNTO value DO commands ENDFOR {
-            Node *idnode = register_node(create_id_node($2));
-            $$ = register_node(create_op4_node(N_FOR, idnode, $4, $6, $8));
+            $$ = new For(new Var($2, yylineno), $4, $6, $8, true);
         }
-    |   READ identifier ENDSTMT { $$ = register_node(create_op1_node(N_READ, $2)); }
-    |   WRITE value ENDSTMT { $$ = register_node(create_op1_node(N_WRITE, $2)); }
-    |   SKIP ENDSTMT { $$ = register_node(create_node(N_SKIP)); }
+    |   READ identifier ENDSTMT { $$ = new Read($2); }
+    |   WRITE value ENDSTMT { $$ = new Write($2); }
+    |   SKIP ENDSTMT { $$ = new Skip(); }
     ;
 
 expression:
-        value { $$ = $1; }
-    |   value PLUS value    { $$ = register_node(create_op2_node(N_PLUS, $1, $3));  }
-    |   value MINUS value   { $$ = register_node(create_op2_node(N_MINUS, $1, $3)); }
-    |   value MULT value    { $$ = register_node(create_op2_node(N_MULT, $1, $3));  }
-    |   value DIV value     { $$ = register_node(create_op2_node(N_DIV, $1, $3));   }
-    |   value MOD value     { $$ = register_node(create_op2_node(N_MOD, $1, $3));   }
+        value { $$ = new Const($1); }
+    |   value PLUS value    { $$ = new Plus($1, $3); }
+    |   value MINUS value   { $$ = new Minus($1, $3); }
+    |   value MULT value    { $$ = new Mult($1, $3); }
+    |   value DIV value     { $$ = new Div($1, $3); }
+    |   value MOD value     { $$ = new Mod($1, $3); }
     ;
 
 condition:
-        value REL_EQ value  { $$ = register_node(create_op2_node(N_CEQ, $1, $3)); }
-    |   value REL_NEQ value { $$ = register_node(create_op2_node(N_CNEQ, $1, $3)); }
-    |   value REL_GT value  { $$ = register_node(create_op2_node(N_CGT, $1, $3)); }
-    |   value REL_LT value  { $$ = register_node(create_op2_node(N_CLT, $1, $3)); }
-    |   value REL_LEQ value { $$ = register_node(create_op2_node(N_CLEQ, $1, $3)); }
-    |   value REL_GEQ value { $$ = register_node(create_op2_node(N_CGEQ, $1, $3)); }
+        value REL_EQ value  { $$ = new Eq($1, $3); }
+    |   value REL_NEQ value { $$ = new Neq($1,$3); }
+    |   value REL_GT value  { $$ = new Gt($1,$3); }
+    |   value REL_LT value  { $$ = new Lt($1,$3); }
+    |   value REL_LEQ value { $$ = new Leq($1,$3); }
+    |   value REL_GEQ value { $$ = new Geq($1,$3); }
     ;
 
 value:
-        NUM { $$ = register_node(create_value_node($1)); }
-    |   identifier { $$ = $1; }
+        NUM { $$ = new Value($1); }
+    |   identifier { $$ = new Value($1); }
     ;
 
 identifier:
         PIDENTIFIER {
-             $$ = register_node(create_id_node($1));
+            symbols.get_var($1);
+            $$ = new Var($1, yylineno);
          }
-    |   PIDENTIFIER BRACKET_OPEN PIDENTIFIER BRACKET_CLOSE { $$ = create_id_node((char *) "arr[id]"); }
-    |   PIDENTIFIER BRACKET_OPEN NUM BRACKET_CLOSE { $$ = create_id_node((char *) "arr[num]"); }
+    |   PIDENTIFIER BRACKET_OPEN PIDENTIFIER BRACKET_CLOSE { $$ = new VarArray($1, new Var($3, yylineno), yylineno); }
+    |   PIDENTIFIER BRACKET_OPEN NUM BRACKET_CLOSE { $$ = new ConstArray($1, $3, yylineno); }
     ;
 %%

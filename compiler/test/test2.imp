@@ -1,0 +1,6 @@
+VAR
+a
+BEGIN
+a := 275;
+WRITE a;
+END

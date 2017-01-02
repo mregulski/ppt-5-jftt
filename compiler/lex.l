@@ -57,6 +57,6 @@
 "["             { TOKEN(BRACKET_OPEN); }
 "]"             { TOKEN(BRACKET_CLOSE); }
 "\n"            { /* allow yylineno to update */ }
-[ \t\n]+        ;
+[ \t]           ;
 .               ;
 %%

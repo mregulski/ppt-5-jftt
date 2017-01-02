@@ -1,0 +1,13 @@
+// id(a)
+ZERO 0
+// endvar
+// num(15)
+ZERO 1
+INC 1
+SHL 1
+SHL 1
+SHL 1
+DEC 1
+// endnum
+STORE 1
+HALT

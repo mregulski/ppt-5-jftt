@@ -2,7 +2,9 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <typeinfo>
 #include "main.h"
+#include "Node.h"
 #include "symtable.h"
 
 using namespace std;
@@ -10,28 +12,36 @@ using namespace std;
 extern void yyerror(const char *msg);
 extern int yynerrs, yylineno;
 
-
-void SymTable::declare_var(char *name) {
-    declare(name, 0);
+void error(string msg, int loc) {
+    cerr << "Error: near line " << loc << ": " << msg << endl;
 }
 
-void SymTable::declare_arr(char *name, size_t size) {
-    declare(name, size);
-}
-
-void SymTable::declare(char *name, size_t size) {
+Symbol SymTable::get_var(string name) {
     if (table.find(name) != table.end()) {
+        return table[name];
+    }
+    return Symbol();
+    // return table[string(name)];
+}
+
+bool SymTable::declare(Id *id) {
+    if(table.find(id->name) != table.end()) {
+        // redeclaration
         yynerrs++;
         ostringstream os;
-        os << name << " already defined on line " << table[name].def_line;
-        std::string msg = os.str();
-        yyerror(msg.c_str());
-    } else {
-        Var var(name, size);
-        table[name] = var;
+        os << id->name << " already defined on line " << table[id->name].def_line;
+        error(os.str(), id->lineno);
+        return false;
     }
-}
-
-Var SymTable::get_var(char *name) {
-    return table[string(name)];
+    else {
+        Symbol var;
+        const type_info &id_type = typeid(id);
+        if (id_type == typeid(Var)) {
+            var = Symbol(id->name, id->lineno);
+        } else if (id_type == typeid(ConstArray)) {
+            var = Symbol(id->name, /*dynamic_cast<ConstArray &>(*id).*/((ConstArray*)id)->idx, id->lineno);
+        }
+        table[id->name] = var;
+        return true;
+    }
 }
