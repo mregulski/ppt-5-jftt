@@ -1,0 +1,10 @@
+VAR a b c
+BEGIN
+a := 4;
+b := a * 9;
+c := 9 * a;
+WRITE b;
+WRITE c;
+c := 0 * a;
+WRITE c;
+END

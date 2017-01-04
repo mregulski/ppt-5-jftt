@@ -1,6 +1,9 @@
 #include <vector>
 #include <iostream>
+#include "Inter.h"
 #include "SymTable.h"
+#include "CodeGen.h"
+
 #ifndef YYDEBUG
     #define YYDEBUG 0
 #endif
@@ -10,17 +13,21 @@ extern int yydebug;
 Node *root;
 SymTable symbols;
 
+using namespace std;
+
 int main() {
     yydebug = YYDEBUG;
     int result = yyparse();
     if (result) {
-        printf("Invalid input\n");
+        cerr << "Invalid input" << endl;
     } else {
-        printf("No syntax errors\n");
+        cerr << "No syntax errors" << endl;
         if (root != NULL) {
-            root->gen_ir();
-            std::cout << ((Program *)root)->dump(std::cout, 0);
-            // walk_tree(root, 0);
+            cerr << "====================\n\tAST\n====================" << endl;
+            ((Program *)root)->dump(cerr, 0);
+            CodeGen generator;
+            cerr << "====================\n\tOUTPUT\n====================" << endl;
+            generator.generate_to(cout, root);
         }
     }
     return result;

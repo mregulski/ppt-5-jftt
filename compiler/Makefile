@@ -3,9 +3,9 @@ WORK_DIR=./build
 COMPILE=clang++ -std=c++11 -Wno-deprecated-register
 
 debug: DEBUG= -g
-debug: clean parser
+debug: clean parser interpreter
 
-parser: clean lex grammar
+parser: out_dir work_dir lex grammar
 	cp *.h $(WORK_DIR)/
 	$(COMPILE) $(WORK_DIR)/lex.yy.c $(WORK_DIR)/grammar.tab.c *.cpp -o $(OUT_DIR)/parser -lfl $(DEBUG)
 
@@ -18,7 +18,7 @@ lex: lex.l
 
 grammar: work_dir
 grammar: grammar.y
-	bison --defines=$(WORK_DIR)/grammar.tab.h -o $WORK_DIR)/grammar.tab.c grammar.y
+	bison --defines=$(WORK_DIR)/grammar.tab.h -o $(WORK_DIR)/grammar.tab.c grammar.y
 
 clean:
 	rm -rf $(OUT_DIR)

@@ -2,6 +2,8 @@
 %define parse.error verbose
 %define parse.trace
 %{
+    #ifndef GRAMMAR_TAB_H
+    #define GRAMMAR_TAB_H 1
     #include "SymTable.h"
     #include "Node.h"
     #include <unordered_map>
@@ -126,3 +128,4 @@ identifier:
     |   PIDENTIFIER BRACKET_OPEN NUM BRACKET_CLOSE { $$ = new ConstArray($1, $3, yylineno); }
     ;
 %%
+#endif

@@ -1,0 +1,12 @@
+VAR
+a b
+BEGIN
+a := 4;
+b := 19;
+b := a;
+WRITE a;
+WRITE b;
+a := b;
+WRITE a;
+WRITE b;
+END

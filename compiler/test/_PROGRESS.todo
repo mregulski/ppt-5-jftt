@@ -1,0 +1,57 @@
+Compiler tests:
+    IO:
+        ✔ io_assign.imp: read, write, assign: var := const @done (3.01.2017, 20:41:05)
+        ✔ io_assign_long.imp: read, write, assign: var := const @done (3.01.2017, 20:42:29)
+        ✔ write_const.imp: write @done (3.01.2017, 20:44:21)
+    Assign:
+        ☐ var := const
+            ✔ assign_const.imp @done (3.01.2017, 20:57:10)
+        ☐ var1 := var2
+            ✔ assign_var.imp @done (3.01.2017, 20:58:45)
+        ✔ var := expr @done (4.01.2017, 00:20:16) @indirect
+    Variables:
+        ✔ Scalar @done (4.01.2017, 00:20:47) @indirect
+        ☐ ConstArray
+        ☐ VarArray
+    Expressions:
+        ☐ Const
+        ☐ Add:
+            ✔ const_const @done (3.01.2017, 21:00:53)
+                ✔ add_const_const.imp @done (3.01.2017, 21:03:56)
+            ☐ const + var
+                ✔ add_const_var.imp @done (3.01.2017, 21:05:57)
+                ✔ add_const_self.imp @done (3.01.2017, 21:05:58)
+            ☐ var + const
+                ✔ add_const_var.imp @done (3.01.2017, 21:05:57)
+                ✔ add_const_self.imp @done (3.01.2017, 21:05:58)
+            ☐ var + var
+                ✔ add_var_var.imp @done (3.01.2017, 21:08:27)
+        ☐ Sub:
+            ☐ const - const
+                ✔ sub_const_const.imp @done (3.01.2017, 21:10:24)
+                ✔ sub_const_const_neg.imp @done (3.01.2017, 21:12:46)
+            ☐ const - var
+            ☐ var - var
+        ☐ Mult:
+            ☐ const * const
+                ✔ mult_const_const.imp @done (4.01.2017, 00:19:24)
+            ☐ const * var
+                ✔ mult_const_var.imp @done (4.01.2017, 00:19:26)
+            ☐ var * var (on hold until jumps are implemented)
+        ☐ Div:
+        ☐ Mod:
+    Conditions:
+        ☐ Eq
+        ☐ Neq
+        ☐ Gt
+        ☐ Lt
+        ☐ Leq
+        ☐ Geq
+    If:
+    For:
+    While:
+    Skip:
+    Error detection:
+        ☐ uninitialized variables
+        ☐ duplicate declaration
+        ☐ undeclared variable

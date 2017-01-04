@@ -1,0 +1,13 @@
+{
+    expected output:
+    > 6
+    > 8
+}
+VAR a
+BEGIN
+a:=4;
+a:=a+2;
+WRITE a;
+a:=2+a;
+WRITE a;
+END

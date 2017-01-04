@@ -1,0 +1,10 @@
+{
+    expected output:
+    > 0
+}
+VAR
+a
+BEGIN
+a:= 5-7;
+WRITE a;
+END

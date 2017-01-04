@@ -3,9 +3,8 @@
 #include <string>
 #include <sstream>
 #include <typeinfo>
-#include "main.h"
 #include "Node.h"
-#include "symtable.h"
+#include "SymTable.h"
 
 using namespace std;
 
@@ -21,7 +20,6 @@ Symbol SymTable::get_var(string name) {
         return table[name];
     }
     return Symbol();
-    // return table[string(name)];
 }
 
 bool SymTable::declare(Id *id) {
@@ -35,12 +33,13 @@ bool SymTable::declare(Id *id) {
     }
     else {
         Symbol var;
-        const type_info &id_type = typeid(id);
+        const type_info &id_type = typeid(*id);
         if (id_type == typeid(Var)) {
-            var = Symbol(id->name, id->lineno);
+            var = Symbol(id->name, id->lineno, offset);
         } else if (id_type == typeid(ConstArray)) {
-            var = Symbol(id->name, /*dynamic_cast<ConstArray &>(*id).*/((ConstArray*)id)->idx, id->lineno);
+            var = Symbol(id->name, id->lineno, offset, ((ConstArray*)id)->idx);
         }
+        offset += var.size;
         table[id->name] = var;
         return true;
     }

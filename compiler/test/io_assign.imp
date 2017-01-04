@@ -1,0 +1,16 @@
+{
+    expected output:
+    > <same as input>
+    > 4
+    > 6
+}
+VAR
+a
+BEGIN
+READ a;
+WRITE a;
+a := 4;
+WRITE a;
+a := 6;
+WRITE a;
+END
