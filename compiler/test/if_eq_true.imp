@@ -1,3 +1,7 @@
+{
+    expected output:
+    > 1
+}
 VAR a
 BEGIN
     a := 4;

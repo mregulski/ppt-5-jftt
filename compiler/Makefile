@@ -10,7 +10,7 @@ parser: out_dir work_dir lex grammar
 	$(COMPILE) $(WORK_DIR)/lex.yy.c $(WORK_DIR)/grammar.tab.c *.cpp -o $(OUT_DIR)/parser -lfl $(DEBUG)
 
 interpreter: out_dir
-	$(COMPILE) example/interpreter.cc -o $(OUT_DIR)/interpreter
+	$(COMPILE) example/interpreter.cc -o $(OUT_DIR)/interpreter $(DEBUG)
 
 lex: work_dir
 lex: lex.l

@@ -13,7 +13,7 @@
 class Node {
     public:
         int line;
-        virtual std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg) = 0;
+        virtual std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg) = 0;
         virtual std::ostream& dump(std::ostream& stream, int depth) = 0;
         std::string indent(int depth) {
             std::string ind(1*depth, '.');
@@ -35,7 +35,7 @@ class Declarations: public Node {
     std::vector<Id*> ids;
     public:
         void declare(Id *id);
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
         std::ostream& dump(std::ostream &stream, int depth) {
             stream << indent(depth) << "Declarations(" << ids.size() << ")\n";
             for (Id *id : ids) {
@@ -51,7 +51,7 @@ class Commands : public Node {
     std::vector<Command*> cmds;
     public:
         void add_command(Command *cmd);
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
         virtual std::ostream& dump(std::ostream& stream, int depth) {
             stream << indent(depth) << "Block(" << cmds.size() << ")\n";
             for (Command *cmd : cmds) {
@@ -66,7 +66,7 @@ class Program : public Node {
         Declarations *decl;
         Commands *code;
         Program(Declarations *decl, Commands *code) : decl(decl), code(code) {}
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
         virtual std::ostream& dump(std::ostream& stream, int depth) {
             stream << "Program()\n";
             decl->dump(stream, depth+1);
@@ -85,7 +85,7 @@ class Value : public Node {
 
         bool isConst() { return value != -1;  }
 
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
 
         virtual std::ostream& dump(std::ostream& stream, int depth) {
             stream << indent(depth);
@@ -106,7 +106,7 @@ class Expression : public Node {
 
         Expression(Value *left, Value *right) : left(left), right(right) {}
 
-        virtual std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg)=0;
+        virtual std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg)=0;
         virtual std::ostream& dump(std::ostream& stream, int depth) {
             stream << indent(depth) << "Expression(" << op() << ")\n";
             left->dump(stream, depth+1);
@@ -144,7 +144,7 @@ class Assign : public Command {
         Id *id;
         Expression *expr;
         Assign(Id *id, Expression *expr) : id(id), expr(expr) {}
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
         virtual std::ostream& dump(std::ostream& stream, int depth) {
             stream << indent(depth) << "Assign()\n";
             id->dump(stream, depth+1);
@@ -160,7 +160,7 @@ class If : public Command {
         Commands *do_else;
         If(Condition *cond, Commands *do_then, Commands *do_else) :
             cond(cond), do_then(do_then), do_else(do_else) {}
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
         virtual std::ostream& dump(std::ostream& stream, int depth) {
             stream << indent(depth) << "If()\n";
             cond->dump(stream, depth+1);
@@ -175,7 +175,7 @@ class While : public Command {
         Condition *cond;
         Commands *body;
         While(Condition *cond, Commands *body) : cond(cond), body(body) {}
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
         virtual std::ostream& dump(std::ostream& stream, int depth) {
             stream << indent(depth) << "While()\n";
             cond->dump(stream, depth+1);
@@ -192,7 +192,7 @@ class For : public Command {
         Commands *body;
         bool isDownTo;
         For(Id *iter, Value *from, Value *to, Commands *body, bool isDownTo) : iterator(iter), from(from), to(to), body(body), isDownTo(isDownTo) {}
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
         virtual std::ostream& dump(std::ostream& stream, int depth) {
             stream << indent(depth) << "For(" << (isDownTo ? "DownTo" : "UpTo") << ")\n";
             iterator->dump(stream, depth+1);
@@ -207,7 +207,7 @@ class Read : public Command {
     public:
         Id *id;
         Read(Id *id) : id(id) {}
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
         virtual std::ostream& dump(std::ostream& stream, int depth) {
             stream  << indent(depth) << "Read()\n";
             id->dump(stream, depth+1);
@@ -219,7 +219,7 @@ class Write : public Command {
     public:
         Value *val;
         Write(Value *val): val(val) {}
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
         virtual std::ostream& dump(std::ostream& stream, int depth) {
             stream << indent(depth) << "Write()\n";
             val->dump(stream, depth+1);
@@ -229,7 +229,7 @@ class Write : public Command {
 
 class Skip : public Command {
     public:
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
         virtual std::ostream& dump(std::ostream& stream, int depth) {
             return stream << indent(depth) << "Skip()\n";
         }
@@ -242,7 +242,7 @@ class Skip : public Command {
 class Const : public Expression {
     public:
         Const(Value *val) : Expression(val, NULL) {}
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
         std::string op() { return "Const"; }
         virtual std::ostream& dump(std::ostream& stream, int depth) {
             stream << indent(depth) << "Const(";
@@ -259,35 +259,35 @@ class Const : public Expression {
 class Plus : public Expression {
     public:
         Plus(Value *left, Value *right) : Expression(left, right) {}
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
         std::string op() { return "Plus"; }
 };
 
 class Minus : public Expression {
     public:
         Minus(Value *left, Value *right) : Expression(left, right) {}
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
         std::string op() { return "Minus"; }
 };
 
 class Mult : public Expression {
     public:
         Mult(Value *left, Value *right) : Expression(left, right) {}
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
         std::string op() { return "Mult"; }
 };
 
 class Div : public Expression {
     public:
         Div(Value *left, Value *right) : Expression(left, right) {}
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
         std::string op() { return "Div"; }
 };
 
 class Mod : public Expression {
     public:
         Mod(Value *left, Value *right) : Expression(left, right) {}
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
         std::string op() { return "Mod"; }
 };
 
@@ -298,42 +298,42 @@ class Mod : public Expression {
 class Eq : public Condition {
     public:
         Eq(Value *left, Value *right) : Condition(left, right) {}
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
          std::string op() { return "Eq"; }
 };
 
 class Neq : public Condition {
     public:
         Neq(Value *left, Value *right) : Condition(left, right) {}
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
          std::string op() { return "Neq"; }
 };
 
 class Gt : public Condition {
     public:
         Gt(Value *left, Value *right) : Condition(left, right) {}
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
          std::string op() { return "Gt"; }
 };
 
 class Lt : public Condition {
     public:
         Lt(Value *left, Value *right) : Condition(left, right) {}
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
          std::string op() { return "Lt"; }
 };
 
 class Leq : public Condition {
     public:
         Leq(Value *left, Value *right) : Condition(left, right) {}
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
         std::string op() { return "Leq"; }
 };
 
 class Geq : public Condition {
     public:
         Geq(Value *left, Value *right) : Condition(left, right) {}
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
         std::string op() { return "Geq"; }
 };
 
@@ -345,7 +345,7 @@ class Geq : public Condition {
 class Var : public Id {
     public:
         Var(std::string name, int lineno) : Id(name, lineno) {}
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
         virtual std::ostream& dump(std::ostream& stream, int depth) {
             return stream << indent(depth) << "Var(" << name << ")\n";
         }
@@ -357,7 +357,7 @@ class ConstArray : public Id {
     public:
         long long idx;
         ConstArray(std::string name, long long idx, int lineno) : Id(name, lineno), idx(idx) {}
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
         virtual std::ostream& dump(std::ostream& stream, int depth) {
             return stream << indent(depth) << "ConstArray(" << name << ", " << idx << ")\n";
         }
@@ -368,7 +368,7 @@ class VarArray : public Id {
     public:
         Var* idx;
         VarArray(std::string name, Var *idx, int lineno) : Id(name, lineno), idx(idx) {}
-        std::vector<Instruction> gen_ir(Imp::label *cur_label, Imp::Reg reg);
+        std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
         virtual std::ostream& dump(std::ostream& stream, int depth) {
             return stream << indent(depth) << "VarArray(" << name << ", " << idx->name << ")\n";
         }

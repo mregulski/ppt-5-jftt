@@ -22,6 +22,10 @@ Symbol SymTable::get_var(string name) {
     return Symbol();
 }
 
+long long SymTable::get_tmp() {
+    return ++offset;
+}
+
 bool SymTable::declare(Id *id) {
     if(table.find(id->name) != table.end()) {
         // redeclaration

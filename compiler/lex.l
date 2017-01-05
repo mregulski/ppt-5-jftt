@@ -16,7 +16,7 @@
 %%
 "{"             BEGIN(COMMENT);
 <COMMENT>"}"    BEGIN(INITIAL);
-<COMMENT>.      ;
+<COMMENT>.|\n   ;
 [_a-z]+         {
                     yylval.text = (char *) malloc(yyleng * sizeof(char) + 1);
                     strcpy(yylval.text, yytext);

@@ -1,0 +1,12 @@
+{
+    expected output:
+    > 3
+}
+VAR
+a b c
+BEGIN
+a := 10;
+b := 7;
+c := a - b;
+WRITE c;
+END

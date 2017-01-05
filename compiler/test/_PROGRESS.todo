@@ -31,6 +31,8 @@ Compiler tests:
                 ✔ sub_const_const.imp @done (3.01.2017, 21:10:24)
                 ✔ sub_const_const_neg.imp @done (3.01.2017, 21:12:46)
             ☐ const - var
+                ✔ sub_const_var.imp @done (5.01.2017, 00:38:09)
+                ✔ sub_var_const.imp @done (5.01.2017, 01:22:01)
             ☐ var - var
         ☐ Mult:
             ☐ const * const
@@ -41,13 +43,20 @@ Compiler tests:
         ☐ Div:
         ☐ Mod:
     Conditions:
-        ☐ Eq
+        ✔ Eq @done (5.01.2017, 03:03:29)
+            ✔ if_eq_true @done (5.01.2017, 03:03:08)
+            ✔ if_eq_false @done (5.01.2017, 03:03:15)
         ☐ Neq
+            ✔ if_neq_true @done (5.01.2017, 03:11:05)
+            ✔ if_neq_false @done (5.01.2017, 03:11:05)
         ☐ Gt
         ☐ Lt
         ☐ Leq
         ☐ Geq
     If:
+        ✔ if_eq_true @done (5.01.2017, 03:03:08)
+        ✔ if_eq_false @done (5.01.2017, 03:03:15)
+        ☐ nested
     For:
     While:
     Skip:

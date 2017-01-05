@@ -1,8 +1,13 @@
+{
+    expected output:
+    > 10
+    > 9
+}
 VAR a b
 BEGIN
 a:=4;
-b:=a+4;
+b:=a+6;
 WRITE b;
-b:=4+a;
+b:=5+a;
 WRITE b;
 END
