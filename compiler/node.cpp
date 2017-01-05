@@ -38,6 +38,7 @@ void Declarations::declare(Id *id) {
 vector<Instruction*> Skip::gen_ir(Imp::label *cur_label, Imp::Reg reg) {
     vector<Instruction*> out;
     out.push_back(Instruction::JUMP(1+*cur_label, cur_label));
+    return out;
 }
 
 /*====================

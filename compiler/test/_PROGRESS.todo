@@ -39,7 +39,8 @@ Compiler tests:
                 ✔ mult_const_const.imp @done (4.01.2017, 00:19:24)
             ☐ const * var
                 ✔ mult_const_var.imp @done (4.01.2017, 00:19:26)
-            ☐ var * var (on hold until jumps are implemented)
+            ☐ var * var
+
         ☐ Div:
         ☐ Mod:
     Conditions:
@@ -60,6 +61,7 @@ Compiler tests:
     For:
     While:
     Skip:
+        ✔ skip.imp @done (5.01.2017, 03:46:36)
     Error detection:
         ☐ uninitialized variables
         ☐ duplicate declaration

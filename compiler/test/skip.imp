@@ -1,0 +1,11 @@
+{
+    expected output:
+    > 0
+    > 1
+}
+VAR
+BEGIN
+WRITE 0;
+SKIP;
+WRITE 1;
+END
