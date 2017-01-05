@@ -1,0 +1,11 @@
+{
+    expected output:
+    > 1
+}
+VAR a
+BEGIN
+    a := 4;
+    IF a = 4 THEN WRITE 1;
+        ELSE WRITE 0;
+    ENDIF
+END

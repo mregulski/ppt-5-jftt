@@ -1,12 +1,30 @@
 #ifndef SYMTABLE_H
-#define SYMTABLE_H
+#define SYMTABLE_H 1
 #include <unordered_map>
-#include "main.h"
+#include <string>
+#include "Node.h"
+
+class Symbol {
+    public:
+        std::string name;
+        long long size;
+        long long offset;
+        bool initialized;
+        long long def_line;
+        Symbol() {}
+        Symbol(std::string name, long long line, long long offset)
+            : name(name), def_line(line), offset(offset), size(1), initialized(false) { }
+        Symbol(std::string name, long long line, long long offset, long long size)
+            : name(name), def_line(line), offset(offset), size(size), initialized(false) { }
+};
+
 class SymTable {
     public:
-        bool declare(char *name, size_t size);
-        bool exists(char *name);
+        Symbol get_var(std::string name);
+        long long get_tmp();
+        bool declare(Id *id);
     private:
-        std::unordered_map<std::string, Var> symbols;
+        long long offset = 0;
+        std::unordered_map<std::string, Symbol> table;
 };
 #endif

@@ -1,22 +1,27 @@
 %option noyywrap
 %option yylineno
 %{
-    #include <string>
-    #include "symtable.h"
+    // #include <string.h>
+    #include "Node.h"
     #include "grammar.tab.h"
-    #define TOKEN(t) return (yylval.token = t)
-    #define SAVE_TOKEN yylval.text = strdup(yytext);
-    #define SAVE_INT yylval.val = strtoll(yytext, NULL, 10);
 
-    extern "C" int yylex();
+    #define TOKEN(t) return (yylval.token = t)
+    #define SAVE_INT yylval.val = strtoll(yytext, NULL, 10)
+
+
+    // extern int yylex(YYSTYPE *lvalp, YYLTYPE *llocp);
 %}
 
 %x COMMENT
 %%
 "{"             BEGIN(COMMENT);
 <COMMENT>"}"    BEGIN(INITIAL);
-<COMMENT>.      ;
-[_a-z]+         { SAVE_TOKEN; return PIDENTIFIER; }
+<COMMENT>.|\n   ;
+[_a-z]+         {
+                    yylval.text = (char *) malloc(yyleng * sizeof(char) + 1);
+                    strcpy(yylval.text, yytext);
+                    return PIDENTIFIER;
+                }
 [0-9]+          { SAVE_INT; return NUM; }
 "-"             { TOKEN(MINUS); }
 "+"             { TOKEN(PLUS); }

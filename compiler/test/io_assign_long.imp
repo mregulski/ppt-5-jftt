@@ -1,0 +1,27 @@
+VAR
+a
+BEGIN
+a := 0;
+WRITE a;
+a := 1;
+WRITE a;
+a := 2;
+WRITE a;
+a := 4;
+WRITE a;
+a := 5;
+WRITE a;
+a := 15;
+WRITE a;
+a := 16;
+WRITE a;
+a := 51;
+WRITE a;
+a := 135;
+WRITE a;
+a := 135;
+WRITE a;
+a := 135;
+WRITE a;
+
+END

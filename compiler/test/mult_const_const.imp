@@ -1,0 +1,11 @@
+VAR a
+BEGIN
+a := 4*5;
+WRITE a;
+a := 0*1231231;
+WRITE a;
+a := 23131344*0;
+WRITE a;
+a := 1*64;
+WRITE a;
+END

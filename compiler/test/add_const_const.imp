@@ -1,0 +1,10 @@
+{
+    expected output:
+    > 7
+}
+VAR
+a
+BEGIN
+a := 3+4;
+WRITE a;
+END

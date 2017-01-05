@@ -1,26 +1,34 @@
+#include <vector>
 #include <iostream>
-#include <unordered_map>
-#include "main.h"
-#include "symtable.h"
+#include "Inter.h"
+#include "SymTable.h"
+#include "CodeGen.h"
+
 #ifndef YYDEBUG
-# define YYDEBUG 0
+    #define YYDEBUG 0
 #endif
 extern int yyparse();
 extern int yydebug;
+
+Node *root;
 SymTable symbols;
+
 using namespace std;
 
 int main() {
-
     yydebug = YYDEBUG;
     int result = yyparse();
     if (result) {
-        std::cout << "Invalid input\n";
+        cerr << "Invalid input" << endl;
     } else {
-        std::cout << "Valid input\n";
+        cerr << "No syntax errors" << endl;
+        if (root != NULL) {
+            cerr << "====================\n\tAST\n====================" << endl;
+            ((Program *)root)->dump(cerr, 0);
+            CodeGen generator;
+            cerr << "====================\n\tOUTPUT\n====================" << endl;
+            generator.generate_to(cout, root);
+        }
     }
     return result;
 }
-
-
-
