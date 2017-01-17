@@ -2,7 +2,7 @@
 %option yylineno
 %{
     // #include <string.h>
-    #include "Node.h"
+    #include "node.h"
     #include "grammar.tab.h"
 
     #define TOKEN(t) return (yylval.token = t)

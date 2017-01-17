@@ -1,8 +1,8 @@
 #include <vector>
 #include <iostream>
-#include "Inter.h"
-#include "SymTable.h"
-#include "CodeGen.h"
+#include "inter.h"
+#include "symtable.h"
+#include "codegen.h"
 
 #ifndef YYDEBUG
     #define YYDEBUG 0

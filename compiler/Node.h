@@ -7,8 +7,8 @@
 #include <sstream>
 #include <vector>
 
-#include "Types.h"
-#include "Inter.h"
+#include "types.h"
+#include "inter.h"
 namespace Imp{
     class Node {
         public:

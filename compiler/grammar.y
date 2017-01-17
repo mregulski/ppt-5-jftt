@@ -11,8 +11,8 @@
     #include <string>
     #include <sstream>
 
-    #include "SymTable.h"
-    #include "Node.h"
+    #include "symtable.h"
+    #include "node.h"
 
     extern int yylineno;
     extern int yylex();

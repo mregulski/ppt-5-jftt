@@ -1,4 +1,4 @@
-#include "Inter.h"
+#include "inter.h"
 const OpCode OpCode::GET    = {"GET", 100};
 const OpCode OpCode::PUT    = {"PUT", 100};
 

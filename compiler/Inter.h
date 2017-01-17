@@ -4,7 +4,7 @@
 #include <string>
 #include <ostream>
 #include <vector>
-#include "Types.h"
+#include "types.h"
 
 struct OpCode {
 

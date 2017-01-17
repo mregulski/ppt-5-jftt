@@ -2,8 +2,8 @@
 #define SYMTABLE_H 1
 #include <unordered_map>
 #include <string>
-#include "Node.h"
-#include "Types.h"
+#include "node.h"
+#include "types.h"
 
 namespace Imp {
     class Symbol {

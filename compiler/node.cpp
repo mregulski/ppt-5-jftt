@@ -1,11 +1,11 @@
 #include <algorithm>
 #include <iostream>
 #include <sstream>
-#include "Node.h"
-#include "SymTable.h"
-#include "Inter.h"
-#include "CodeGen.h"
-#include "Colors.h"
+#include "node.h"
+#include "symtable.h"
+#include "inter.h"
+#include "codegen.h"
+#include "colors.h"
 /* alphabetic order */
 
 using namespace std;

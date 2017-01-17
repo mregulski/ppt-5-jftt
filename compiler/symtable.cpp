@@ -3,8 +3,8 @@
 #include <string>
 #include <sstream>
 #include <typeinfo>
-#include "Node.h"
-#include "SymTable.h"
+#include "node.h"
+#include "symtable.h"
 
 using namespace std;
 
