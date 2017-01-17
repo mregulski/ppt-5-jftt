@@ -1,0 +1,20 @@
+{
+    expected output:
+    > 2
+}
+VAR
+a b c
+BEGIN
+a := 5;
+b := 50;
+c := 500;
+IF b > a THEN
+    IF b > c THEN
+        WRITE 1;
+    ELSE
+        WRITE 2;
+    ENDIF
+ELSE
+    WRITE 3;
+ENDIF
+END

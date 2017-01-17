@@ -1,0 +1,43 @@
+VAR n m reszta potega dzielnik
+BEGIN
+n := 12;
+dzielnik := 2;
+m := dzielnik * dzielnik;
+potega := 0;
+reszta := n % dzielnik;
+
+WRITE n;
+WRITE dzielnik;
+n := n / dzielnik;
+WRITE n;
+potega := potega + 1;
+reszta := n % dzielnik;
+
+WRITE 10001110001110001;
+
+WRITE n;
+WRITE dzielnik;
+n := n / dzielnik;
+WRITE n;
+potega := potega + 1;
+reszta := n % dzielnik;
+
+WRITE 10001110001110001;
+
+WRITE n;
+WRITE dzielnik;
+n := n / dzielnik;
+WRITE n;
+potega := potega + 1;
+reszta := n % dzielnik;
+
+WRITE 10001110001110001;
+
+WRITE n;
+WRITE dzielnik;
+n := n / dzielnik;
+WRITE n;
+potega := potega + 1;
+reszta := n % dzielnik;
+
+END

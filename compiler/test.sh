@@ -1,6 +1,6 @@
 #!/bin/bash
 src=$1
-out_name=${1:5:-4}
+out_name=$(echo $1 | awk -F"/" '{print $2}' | awk -F"." '{print $1}')
 mkdir -p test_out
 echo "========================================"
 echo "Test: $1"

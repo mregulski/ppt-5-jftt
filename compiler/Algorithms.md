@@ -1,10 +1,21 @@
 # Commands
-
 ## Assign
-Straightforward.
+`id := expression;`
+
+**Status:** DONE
+
+Evaluate expression and store in location referred to by id.
+
+```asm
+0.  r1 <- <expression>
+1.  r0 <- &id
+2.  STORE 1;
+```
 
 ## If
 `IF <cond> THEN <do_then> ELSE <do_else> ENDIF`
+
+**Status:** DONE
 
 Evaluate condition and jump to the correct branch.
 
@@ -17,18 +28,45 @@ ELSE:   n+3.    <else>      ; m commands
 END:    n+m.    <next>      ; next instructions
 ```
 
-------------------------
+
+## While
+**Status:** DONE
+
+```asm
+START:      R1 <- <cond>
+        0.  ifZero R1 jump END
+        1.  <body>
+        n.  JUMP START
+END:    n+1.
+```
+
+
+## For
+**Status:** DONE
+
+
+## Read
+**Status:** DONE
+
+
+## Write
+**Status:** DONE
+
+* * * * *
+
 
 # Expressions
-
 ## Addition
+**Status:** DONE
 
 Straightforward.
 
-## Subtraction
 
-* `var` - `const`
-```
+## Subtraction
+**Status:** DONE
+
+- `var` - `const`
+```asm
 0.  R0 <- &tmp
 1.  R1 <- `const`
 2.  STORE 1
@@ -38,16 +76,25 @@ Straightforward.
 6.  SUB 1
 ```
 
-------------------------
+
+## Multiplication
+**Status:** WIP
+
+## Division
+**Status:** NOT STARTED
+
+* * * * *
 
 # Conditions
-
 ## Equal
+`<value> a = <value> b`
+
+**Status:** DONE
 
 Compare values `a` and `b` by two comparisons.
 `a` and `b` are equal if `a-b == b-a` (single subtraction is not enough in case `a > b` because of negative values being rounded to 0)
-* Return location: `r1`.
-* Return value:
+** Return location: `r1`.
+** Return value:
     - `1` if `a == b`
     - `0` otherwise
 ```asm
@@ -64,8 +111,41 @@ TRUE:   4.  INC 1
 END:    5.  ; r1 = (a == b) ? 1 : 0
 ```
 
-## Not Equal
-Same as Equal with flipped `r1` values. The initial value of `r1` is 1, if `a` equals `b` it gets decremented to 0.
 
-## Greater Than
+## Not-equal
+`<value> a <> <value> b`
 
+**Status:** DONE
+
+Same as `Equal` with flipped `R1` values.
+
+## Greater-than
+`<value> a > <value> b`
+
+**Status**: DONE
+
+```asm
+            R2 <- a - b
+        0.  ZERO 1
+        1.  ifZero R2 jump END [+2]
+        2.  INC 1
+END:    3.  < R1 = 1 if a > b, 0 otherwise>
+```
+
+## Less-than
+`<value> a > <value> b`
+
+**Status**: WIP
+
+Same as `Greater-than` with flipped sides.
+
+
+## Less-or-Equal
+`<value> a <= <value> b`
+
+**Status**: WIP
+
+Same as `Greater Than` with flipped `R1` values.
+
+
+* * * * *

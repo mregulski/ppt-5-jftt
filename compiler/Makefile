@@ -2,7 +2,7 @@ OUT_DIR=./bin
 WORK_DIR=./build
 COMPILE=clang++ -std=c++11 -Wno-deprecated-register
 
-debug: DEBUG= -g
+debug: DEBUG= -g -O0
 debug: clean parser interpreter
 
 parser: out_dir work_dir lex grammar

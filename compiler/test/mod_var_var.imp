@@ -1,0 +1,14 @@
+VAR a b c
+BEGIN
+a := 10;
+b := 3;
+c := a % b;
+WRITE c;
+
+a := 11*19;
+a := a + 16;
+b := 19;
+c := a % b;
+
+WRITE c;
+END

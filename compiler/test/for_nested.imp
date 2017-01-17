@@ -1,0 +1,15 @@
+VAR a[5]
+BEGIN
+FOR i FROM 0 TO 4 DO
+    a[i] := i;
+    FOR j FROM 0 TO 4 DO
+        a[i] := a[i] + j;
+    ENDFOR
+    WRITE a[i];
+ENDFOR
+WRITE 1024;
+FOR i FROM 0 TO 4 DO
+    WRITE a[i];
+ENDFOR
+
+END

@@ -1,0 +1,34 @@
+VAR
+BEGIN
+
+{
+    expected output:
+    > 111
+    > 10, 9, ..., 1, 0
+}
+WRITE 111;
+FOR i FROM 10 DOWNTO 0 DO
+    WRITE i;
+ENDFOR
+
+{
+    expected output:
+    > 222
+    > 10
+}
+WRITE 222;
+FOR i FROM 10 DOWNTO 10 DO
+    WRITE i;
+ENDFOR
+
+{
+    expected output:
+    > 333
+}
+
+WRITE 333;
+FOR i FROM 9 DOWNTO 10 DO
+    WRITE i;
+ENDFOR
+
+END

@@ -7,6 +7,7 @@ namespace Imp {
     };
     typedef long long arg;
     typedef long long label;
+    typedef int64_t number;
 }
 
 #endif

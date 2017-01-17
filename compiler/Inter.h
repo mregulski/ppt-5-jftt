@@ -3,7 +3,7 @@
 
 #include <string>
 #include <ostream>
-
+#include <vector>
 #include "Types.h"
 
 struct OpCode {
@@ -94,6 +94,75 @@ struct Instruction {
         static Instruction *HALT(Imp::label *label) {
             return new Instruction(OpCode::HALT, (*label)++);
         }
+
+        /*
+         * Create instruction directly in output vector
+         */
+
+        static void GET(std::vector<Instruction*>& out, Imp::Reg arg1, Imp::label *label) {
+            out.push_back(new Instruction(OpCode::GET, arg1, (*label)++));
+        }
+
+        static void PUT(std::vector<Instruction*>& out, Imp::Reg arg1, Imp::label *label) {
+            out.push_back(new Instruction(OpCode::PUT, arg1, (*label)++));
+        }
+
+        static void LOAD(std::vector<Instruction*>& out, Imp::Reg arg1, Imp::label *label) {
+            out.push_back(new Instruction(OpCode::LOAD, arg1, (*label)++));
+        }
+
+        static void STORE(std::vector<Instruction*>& out, Imp::Reg arg1, Imp::label *label) {
+            out.push_back(new Instruction(OpCode::STORE, arg1, (*label)++));
+        }
+
+        static void ADD(std::vector<Instruction*>& out, Imp::Reg arg1, Imp::label *label) {
+            out.push_back(new Instruction(OpCode::ADD, arg1, (*label)++));
+        }
+
+        static void SUB(std::vector<Instruction*>& out, Imp::Reg arg1, Imp::label *label) {
+            out.push_back(new Instruction(OpCode::SUB, arg1, (*label)++));
+        }
+
+        static void COPY(std::vector<Instruction*>& out, Imp::Reg arg1, Imp::label *label) {
+            out.push_back(new Instruction(OpCode::COPY, arg1, (*label)++));
+        }
+
+        static void SHR(std::vector<Instruction*>& out, Imp::Reg arg1, Imp::label *label) {
+            out.push_back(new Instruction(OpCode::SHR, arg1, (*label)++));
+        }
+
+        static void SHL(std::vector<Instruction*>& out, Imp::Reg arg1, Imp::label *label) {
+            out.push_back(new Instruction(OpCode::SHL, arg1, (*label)++));
+        }
+
+        static void INC(std::vector<Instruction*>& out, Imp::Reg arg1, Imp::label *label) {
+            out.push_back(new Instruction(OpCode::INC, arg1, (*label)++));
+        }
+
+        static void DEC(std::vector<Instruction*>& out, Imp::Reg arg1, Imp::label *label) {
+            out.push_back(new Instruction(OpCode::DEC, arg1, (*label)++));
+        }
+
+        static void ZERO(std::vector<Instruction*>& out, Imp::Reg arg1, Imp::label *label) {
+            out.push_back(new Instruction(OpCode::ZERO, arg1, (*label)++));
+        }
+
+        static void JUMP(std::vector<Instruction*>& out, Imp::arg arg2, Imp::label *label) {
+            out.push_back(new Instruction(OpCode::JUMP, Imp::NoReg, arg2, (*label)++));
+        }
+
+        static void JZERO(std::vector<Instruction*>& out, Imp::Reg arg1, Imp::arg arg2, Imp::label *label) {
+            out.push_back(new Instruction(OpCode::JZERO, arg1, arg2, (*label)++));
+        }
+
+        static void JODD(std::vector<Instruction*>& out, Imp::Reg arg1, Imp::arg arg2, Imp::label *label) {
+            out.push_back(new Instruction(OpCode::JODD, arg1, arg2, (*label)++));
+        }
+
+        static void HALT(std::vector<Instruction*>& out, Imp::label *label) {
+            out.push_back(new Instruction(OpCode::HALT, (*label)++));
+        }
+
     private:
         Instruction(OpCode op, Imp::label label)
             : op(op), arg1(Imp::NoReg), arg2(NoArg), label(label) {}

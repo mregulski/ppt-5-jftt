@@ -1,0 +1,20 @@
+{
+    expected output:
+    > 1
+    > 1
+}
+VAR a
+BEGIN
+a := 4;
+IF a <= 5 THEN
+    WRITE 1;
+ELSE
+    WRITE 0;
+ENDIF
+
+IF a <= 4 THEN
+    WRITE 1;
+ELSE
+    WRITE 0;
+ENDIF
+END

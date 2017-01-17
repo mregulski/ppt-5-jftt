@@ -1,0 +1,47 @@
+VAR
+a
+BEGIN
+
+{ expected output: 111, 5, 4, ..., 1, 0 }
+a := 5;
+WRITE 111;
+FOR i FROM a DOWNTO 0 DO
+    WRITE i;
+ENDFOR
+
+{ expected output: 222, 2, 1 }
+a := 2;
+WRITE 222;
+FOR i FROM a DOWNTO 1 DO
+    WRITE i;
+ENDFOR
+
+{ expected output: 333 }
+a := 6;
+WRITE 333;
+FOR i FROM a DOWNTO 7 DO
+    WRITE i;
+ENDFOR
+
+{ expected output: 444, 0 }
+a := 0;
+WRITE 444;
+FOR i FROM 0 DOWNTO a DO
+    WRITE i;
+ENDFOR
+
+{ expected output: 555, 5, 4, 3, 2 }
+a := 2;
+WRITE 555;
+FOR i FROM 5 DOWNTO a DO
+    WRITE i;
+ENDFOR
+
+{ expected output: 666 }
+a := 6;
+WRITE 666;
+FOR i FROM 5 DOWNTO a DO
+    WRITE i;
+ENDFOR
+
+END

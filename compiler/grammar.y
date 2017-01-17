@@ -4,18 +4,28 @@
 %{
     #ifndef GRAMMAR_TAB_H
     #define GRAMMAR_TAB_H 1
-    #include "SymTable.h"
-    #include "Node.h"
+
     #include <unordered_map>
     #include <vector>
+    #include <iostream>
+    #include <string>
+    #include <sstream>
+
+    #include "SymTable.h"
+    #include "Node.h"
+
     extern int yylineno;
     extern int yylex();
-    bool ERROR = false;
-    void yyerror(const char *s) {
-        fprintf(stderr, "[%d] ERROR: %s\n", yylineno-1, s);
+
+    int errors = 0;
+
+    void yyerror(std::string msg) {
+        // fprintf(stderr, "[%d] ERROR: %s\n", yylineno-1, s);
+        errors++;
+        std::cerr << "[" << yylineno-1 << "] " << "ERROR: " << msg << std::endl;
     }
-    extern Node *root;
-    extern SymTable symbols;
+    extern Imp::Node *root;
+    extern Imp::SymTable symbols;
 %}
 
 %token <text> PIDENTIFIER
@@ -33,16 +43,16 @@
 
 %union {
     char *text;
-    int val;
+    Imp::number val;
     int token;
-    Program *prog;
-    Declarations *decl;
-    Commands *cmds;
-    Command *cmd;
-    Id *id;
-    Value *value;
-    Condition *cond;
-    Expression *expr;
+    Imp::Program *prog;
+    Imp::Declarations *decl;
+    Imp::Commands *cmds;
+    Imp::Command *cmd;
+    Imp::Id *id;
+    Imp::Value *value;
+    Imp::Condition *cond;
+    Imp::Expression *expr;
 
 }
 %type <prog> program
@@ -58,74 +68,80 @@
 
 program:
         VAR vdeclarations KEY_BEGIN commands KEY_END {
-            $$ = new Program($2, $4);
+            $$ = new Imp::Program($2, $4);
             root = $$;
         }
     ;
 
 vdeclarations:
         vdeclarations PIDENTIFIER {
-            $1->declare(new Var($2, yylineno));
+            symbols.declare(new Imp::Var($2, yylineno));
         }
     |   vdeclarations PIDENTIFIER BRACKET_OPEN NUM BRACKET_CLOSE {
-            $1->declare(new ConstArray($2, $4, yylineno));
+            symbols.declare(new Imp::ConstArray($2, $4, yylineno));
         }
-    |   { $$ = new Declarations(); }
+    |   { $$ = new Imp::Declarations(); }
     ;
 
 commands:
         commands command { $1->add_command($2); }
     |   command {
-            $$ = new Commands();
+            $$ = new Imp::Commands();
             $$->add_command($1);
             }
     ;
 
 command:
-        identifier ASSIGN expression ENDSTMT { $$ = new Assign($1, $3); }
-    |   IF condition THEN commands ELSE commands ENDIF { $$ = new If($2, $4, $6); }
-    |   WHILE condition DO commands ENDWHILE { $$ = new While($2, $4); }
+        identifier ASSIGN expression ENDSTMT { $$ = new Imp::Assign($1, $3, yylineno); }
+    |   IF condition THEN commands ELSE commands ENDIF { $$ = new Imp::If($2, $4, $6, yylineno); }
+    |   WHILE condition DO commands ENDWHILE { $$ = new Imp::While($2, $4, yylineno); }
     |   FOR PIDENTIFIER FROM value TO value DO commands ENDFOR {
-            $$ = new For(new Var($2, yylineno), $4, $6, $8, false);
+            Imp::Var *iterator = new Imp::Var($2, yylineno);
+            $$ = new Imp::For(iterator, $4, $6, $8, false, yylineno);
+            // symbols.undeclare(iterator->name);
         }
     |   FOR PIDENTIFIER FROM value DOWNTO value DO commands ENDFOR {
-            $$ = new For(new Var($2, yylineno), $4, $6, $8, true);
+            $$ = new Imp::For(new Imp::Var($2, yylineno), $4, $6, $8, true, yylineno);
         }
-    |   READ identifier ENDSTMT { $$ = new Read($2); }
-    |   WRITE value ENDSTMT { $$ = new Write($2); }
-    |   SKIP ENDSTMT { $$ = new Skip(); }
+    |   READ identifier ENDSTMT { $$ = new Imp::Read($2, yylineno); }
+    |   WRITE value ENDSTMT { $$ = new Imp::Write($2, yylineno); }
+    |   SKIP ENDSTMT { $$ = new Imp::Skip(); }
     ;
 
 expression:
-        value { $$ = new Const($1); }
-    |   value PLUS value    { $$ = new Plus($1, $3); }
-    |   value MINUS value   { $$ = new Minus($1, $3); }
-    |   value MULT value    { $$ = new Mult($1, $3); }
-    |   value DIV value     { $$ = new Div($1, $3); }
-    |   value MOD value     { $$ = new Mod($1, $3); }
+        value { $$ = new Imp::Const($1, yylineno); }
+    |   value PLUS value    { $$ = new Imp::Plus($1, $3, yylineno); }
+    |   value MINUS value   { $$ = new Imp::Minus($1, $3, yylineno); }
+    |   value MULT value    { $$ = new Imp::Mult($1, $3, yylineno); }
+    |   value DIV value     { $$ = new Imp::Div($1, $3, yylineno); }
+    |   value MOD value     { $$ = new Imp::Mod($1, $3, yylineno); }
     ;
 
 condition:
-        value REL_EQ value  { $$ = new Eq($1, $3); }
-    |   value REL_NEQ value { $$ = new Neq($1,$3); }
-    |   value REL_GT value  { $$ = new Gt($1,$3); }
-    |   value REL_LT value  { $$ = new Lt($1,$3); }
-    |   value REL_LEQ value { $$ = new Leq($1,$3); }
-    |   value REL_GEQ value { $$ = new Geq($1,$3); }
+        value REL_EQ value  { $$ = new Imp::Eq($1, $3, yylineno); }
+    |   value REL_NEQ value { $$ = new Imp::Neq($1,$3, yylineno); }
+    |   value REL_GT value  { $$ = new Imp::Gt($1,$3, yylineno); }
+    |   value REL_LT value  { $$ = new Imp::Lt($1,$3, yylineno); }
+    |   value REL_LEQ value { $$ = new Imp::Leq($1,$3, yylineno); }
+    |   value REL_GEQ value { $$ = new Imp::Geq($1,$3, yylineno); }
     ;
 
 value:
-        NUM { $$ = new Value($1); }
-    |   identifier { $$ = new Value($1); }
+        NUM { $$ = new Imp::Value($1, yylineno); }
+    |   identifier { $$ = new Imp::Value($1, yylineno); }
     ;
 
 identifier:
         PIDENTIFIER {
-            symbols.get_var($1);
-            $$ = new Var($1, yylineno);
+            // if (symbols.get_var($1).line == Imp::Symbol::Undefined) {
+            //     std::ostringstream msg;
+            //     msg << "Attempt to use an undefined symbol " << $1;
+            //     yyerror(msg.str());
+            // }
+            $$ = new Imp::Var($1, yylineno);
          }
-    |   PIDENTIFIER BRACKET_OPEN PIDENTIFIER BRACKET_CLOSE { $$ = new VarArray($1, new Var($3, yylineno), yylineno); }
-    |   PIDENTIFIER BRACKET_OPEN NUM BRACKET_CLOSE { $$ = new ConstArray($1, $3, yylineno); }
+    |   PIDENTIFIER BRACKET_OPEN PIDENTIFIER BRACKET_CLOSE { $$ = new Imp::VarArray($1, new Imp::Var($3, yylineno), yylineno); }
+    |   PIDENTIFIER BRACKET_OPEN NUM BRACKET_CLOSE { $$ = new Imp::ConstArray($1, $3, yylineno); }
     ;
 %%
 #endif

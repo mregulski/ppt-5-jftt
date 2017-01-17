@@ -1,11 +1,37 @@
 {
     expected output:
     > 1
+    > 1
+    > 1
 }
-VAR a
+VAR a b
 BEGIN
     a := 4;
     IF a = 4 THEN WRITE 1;
         ELSE WRITE 0;
+    ENDIF
+
+    IF 4 = a THEN WRITE 1;
+        ELSE WRITE 0;
+    ENDIF
+
+    IF a = a THEN
+        WRITE 1;
+    ELSE
+        WRITE 0;
+    ENDIF
+
+    b := 4;
+    IF a = b THEN
+        WRITE 1;
+    ELSE
+        WRITE 0;
+    ENDIF
+
+    a := 0;
+    IF a = 0 THEN
+        WRITE 1;
+    ELSE
+        WRITE 0;
     ENDIF
 END

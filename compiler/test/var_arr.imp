@@ -1,0 +1,13 @@
+{
+    expected output:
+    > 5
+}
+VAR
+a b[10] c
+BEGIN
+a := 3;
+c := 5;
+b[a] := c;
+WRITE b[a];
+WRITE b;
+END

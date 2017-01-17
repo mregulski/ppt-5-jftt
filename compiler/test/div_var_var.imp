@@ -1,0 +1,23 @@
+VAR a b c
+BEGIN
+a := 10;
+b := 3;
+c := a / b;
+WRITE c;
+
+a := 123;
+b := 2;
+
+c := a / b;
+WRITE c;
+
+a := 6;
+b := 2;
+a := a / b;
+WRITE a;
+
+a := 100;
+b := 3;
+c := a/b;
+WRITE c;
+END
