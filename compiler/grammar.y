@@ -14,18 +14,20 @@
     #include "symtable.h"
     #include "node.h"
 
-    extern int yylineno;
+    extern int CUR_LINE;
     extern int yylex();
 
     int errors = 0;
 
     void yyerror(std::string msg) {
-        // fprintf(stderr, "[%d] ERROR: %s\n", yylineno-1, s);
+        // fprintf(stderr, "[%d] ERROR: %s\n", CUR_LINE-1, s);
         errors++;
-        std::cerr << "[" << yylineno-1 << "] " << "ERROR: " << msg << std::endl;
+        std::cerr << "[" << CUR_LINE-1 << "] " << "ERROR: " << msg << std::endl;
     }
     extern Imp::Node *root;
     extern Imp::SymTable symbols;
+    Imp::Node *decls = NULL;
+    int CUR_LINE = 1;
 %}
 
 %token <text> PIDENTIFIER
@@ -75,12 +77,13 @@ program:
 
 vdeclarations:
         vdeclarations PIDENTIFIER {
-            symbols.declare(new Imp::Var($2, yylineno));
+            auto var = new Imp::Var($2, CUR_LINE);
+            $1->declare(var);
         }
     |   vdeclarations PIDENTIFIER BRACKET_OPEN NUM BRACKET_CLOSE {
-            symbols.declare(new Imp::ConstArray($2, $4, yylineno));
+            $1->declare(new Imp::ConstArray($2, $4, CUR_LINE));
         }
-    |   { $$ = new Imp::Declarations(); }
+    |   { $$ = new Imp::Declarations(); decls = $$; }
     ;
 
 commands:
@@ -92,56 +95,50 @@ commands:
     ;
 
 command:
-        identifier ASSIGN expression ENDSTMT { $$ = new Imp::Assign($1, $3, yylineno); }
-    |   IF condition THEN commands ELSE commands ENDIF { $$ = new Imp::If($2, $4, $6, yylineno); }
-    |   WHILE condition DO commands ENDWHILE { $$ = new Imp::While($2, $4, yylineno); }
+        identifier ASSIGN expression ENDSTMT { $$ = new Imp::Assign($1, $3, CUR_LINE); }
+    |   IF condition THEN commands ELSE commands ENDIF { $$ = new Imp::If($2, $4, $6, CUR_LINE); }
+    |   WHILE condition DO commands ENDWHILE { $$ = new Imp::While($2, $4, CUR_LINE); }
     |   FOR PIDENTIFIER FROM value TO value DO commands ENDFOR {
-            Imp::Var *iterator = new Imp::Var($2, yylineno);
-            $$ = new Imp::For(iterator, $4, $6, $8, false, yylineno);
-            // symbols.undeclare(iterator->name);
+            Imp::Var *iterator = new Imp::Var($2, CUR_LINE);
+            $$ = new Imp::For(iterator, $4, $6, $8, false, CUR_LINE);
         }
     |   FOR PIDENTIFIER FROM value DOWNTO value DO commands ENDFOR {
-            $$ = new Imp::For(new Imp::Var($2, yylineno), $4, $6, $8, true, yylineno);
+            $$ = new Imp::For(new Imp::Var($2, CUR_LINE), $4, $6, $8, true, CUR_LINE);
         }
-    |   READ identifier ENDSTMT { $$ = new Imp::Read($2, yylineno); }
-    |   WRITE value ENDSTMT { $$ = new Imp::Write($2, yylineno); }
+    |   READ identifier ENDSTMT { $$ = new Imp::Read($2, CUR_LINE); }
+    |   WRITE value ENDSTMT { $$ = new Imp::Write($2, CUR_LINE); }
     |   SKIP ENDSTMT { $$ = new Imp::Skip(); }
     ;
 
 expression:
-        value { $$ = new Imp::Const($1, yylineno); }
-    |   value PLUS value    { $$ = new Imp::Plus($1, $3, yylineno); }
-    |   value MINUS value   { $$ = new Imp::Minus($1, $3, yylineno); }
-    |   value MULT value    { $$ = new Imp::Mult($1, $3, yylineno); }
-    |   value DIV value     { $$ = new Imp::Div($1, $3, yylineno); }
-    |   value MOD value     { $$ = new Imp::Mod($1, $3, yylineno); }
+        value { $$ = new Imp::Const($1, CUR_LINE); }
+    |   value PLUS value    { $$ = new Imp::Plus($1, $3, CUR_LINE); }
+    |   value MINUS value   { $$ = new Imp::Minus($1, $3, CUR_LINE); }
+    |   value MULT value    { $$ = new Imp::Mult($1, $3, CUR_LINE); }
+    |   value DIV value     { $$ = new Imp::Div($1, $3, CUR_LINE); }
+    |   value MOD value     { $$ = new Imp::Mod($1, $3, CUR_LINE); }
     ;
 
 condition:
-        value REL_EQ value  { $$ = new Imp::Eq($1, $3, yylineno); }
-    |   value REL_NEQ value { $$ = new Imp::Neq($1,$3, yylineno); }
-    |   value REL_GT value  { $$ = new Imp::Gt($1,$3, yylineno); }
-    |   value REL_LT value  { $$ = new Imp::Lt($1,$3, yylineno); }
-    |   value REL_LEQ value { $$ = new Imp::Leq($1,$3, yylineno); }
-    |   value REL_GEQ value { $$ = new Imp::Geq($1,$3, yylineno); }
+        value REL_EQ value  { $$ = new Imp::Eq($1, $3, CUR_LINE); }
+    |   value REL_NEQ value { $$ = new Imp::Neq($1,$3, CUR_LINE); }
+    |   value REL_GT value  { $$ = new Imp::Gt($1,$3, CUR_LINE); }
+    |   value REL_LT value  { $$ = new Imp::Lt($1,$3, CUR_LINE); }
+    |   value REL_LEQ value { $$ = new Imp::Leq($1,$3, CUR_LINE); }
+    |   value REL_GEQ value { $$ = new Imp::Geq($1,$3, CUR_LINE); }
     ;
 
 value:
-        NUM { $$ = new Imp::Value($1, yylineno); }
-    |   identifier { $$ = new Imp::Value($1, yylineno); }
+        NUM { $$ = new Imp::Value($1, CUR_LINE); }
+    |   identifier { $$ = new Imp::Value($1, CUR_LINE); }
     ;
 
 identifier:
         PIDENTIFIER {
-            // if (symbols.get_var($1).line == Imp::Symbol::Undefined) {
-            //     std::ostringstream msg;
-            //     msg << "Attempt to use an undefined symbol " << $1;
-            //     yyerror(msg.str());
-            // }
-            $$ = new Imp::Var($1, yylineno);
+            $$ = new Imp::Var($1, CUR_LINE);
          }
-    |   PIDENTIFIER BRACKET_OPEN PIDENTIFIER BRACKET_CLOSE { $$ = new Imp::VarArray($1, new Imp::Var($3, yylineno), yylineno); }
-    |   PIDENTIFIER BRACKET_OPEN NUM BRACKET_CLOSE { $$ = new Imp::ConstArray($1, $3, yylineno); }
+    |   PIDENTIFIER BRACKET_OPEN PIDENTIFIER BRACKET_CLOSE { $$ = new Imp::VarArray($1, new Imp::Var($3, CUR_LINE), CUR_LINE); }
+    |   PIDENTIFIER BRACKET_OPEN NUM BRACKET_CLOSE { $$ = new Imp::ConstArray($1, $3, CUR_LINE); }
     ;
 %%
 #endif

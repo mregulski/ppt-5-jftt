@@ -28,6 +28,8 @@ int main() {
         if (root != NULL) {
             cerr << "====================\n\tAST\n====================" << endl;
             ((Program *)root)->dump(cerr, 0);
+            cerr << "====================\n\tSYMBOLS\n====================" << endl;
+            symbols.dump(cerr);
             cerr << "====================\n\tOUTPUT\n====================" << endl;
             generator.generate_to(cout, root);
         }

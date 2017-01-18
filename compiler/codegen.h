@@ -3,9 +3,9 @@
 
 #include <vector>
 #include <iostream>
-#include "Types.h"
-#include "Inter.h"
-#include "Node.h"
+#include "types.h"
+#include "inter.h"
+#include "node.h"
 namespace Imp {
     class CodeGen {
         Imp::label instruction_counter = 0;

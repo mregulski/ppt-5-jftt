@@ -10,12 +10,23 @@
 #include "types.h"
 #include "inter.h"
 namespace Imp{
+    enum NodeType {
+        FOR,
+        INIT,
+        BLOCK,
+        DECL,
+        NORMAL
+    };
+
     class Node {
+        NodeType type;
         public:
             int line;
-
-            Node(int line) : line(line) {}
+            Node(int line, NodeType type) : line(line), type(type) {}
+            Node(int line) : line(line), type(NORMAL) {}
+            Node(NodeType type) : type(type) {}
             Node() {}
+            NodeType getType() { return type; }
             virtual std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg) = 0;
             virtual std::ostream& dump(std::ostream& stream, int depth) = 0;
             std::string indent(int depth) {
@@ -29,9 +40,11 @@ namespace Imp{
         TOP-LEVEL
     ===============*/
     class Id : public Node {
+        bool array;
         public:
+            bool isArray() { return array; }
             std::string name;
-            Id(std::string name, int line) : name(name), Node(line) {}
+            Id(std::string name, bool array, int line) : name(name), array(array), Node(line) {}
     };
 
     class Declarations: public Node {
@@ -50,6 +63,7 @@ namespace Imp{
 
     class Command : public Node {
         public:
+            Command(int line, NodeType type) : Node(line, type) {}
             Command(int line) : Node(line) {}
             Command() {}
     };
@@ -90,7 +104,7 @@ namespace Imp{
             Value(number val, int line) : value(val), id(NULL), Node(line) {}
             Value(Id* id, int line) : value(-1), id(id), Node(line) {}
 
-            bool isConst() { return value != -1;  }
+            bool isConst() { return value != -1; }
 
             std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
 
@@ -151,7 +165,7 @@ namespace Imp{
             Id *id;
             Expression *expr;
 
-            Assign(Id *id, Expression *expr, int line) : id(id), expr(expr), Command(line) {}
+            Assign(Id *id, Expression *expr, int line) : id(id), expr(expr), Command(line, INIT) {}
 
             std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
             virtual std::ostream& dump(std::ostream& stream, int depth) {
@@ -368,7 +382,7 @@ namespace Imp{
     // Variable declaration or access
     class Var : public Id {
         public:
-            Var(std::string name, int line) : Id(name, line) {}
+            Var(std::string name, int line) : Id(name, false, line) {}
             std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
             virtual std::ostream& dump(std::ostream& stream, int depth) {
                 return stream << indent(depth) << "Var(" << name << ")\n";
@@ -380,7 +394,7 @@ namespace Imp{
     class ConstArray : public Id {
         public:
             number idx;
-            ConstArray(std::string name, number idx, int line) : Id(name, line), idx(idx) {}
+            ConstArray(std::string name, number idx, int line) : Id(name, true, line), idx(idx) {}
             std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
             virtual std::ostream& dump(std::ostream& stream, int depth) {
                 return stream << indent(depth) << "ConstArray(" << name << ", " << idx << ")\n";
@@ -391,7 +405,7 @@ namespace Imp{
     class VarArray : public Id {
         public:
             Var* idx;
-            VarArray(std::string name, Var *idx, int line) : Id(name, line), idx(idx) {}
+            VarArray(std::string name, Var *idx, int line) : Id(name, true, line), idx(idx) {}
             std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
             virtual std::ostream& dump(std::ostream& stream, int depth) {
                 return stream << indent(depth) << "VarArray(" << name << ", " << idx->name << ")\n";

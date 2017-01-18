@@ -6,7 +6,7 @@
 #include "inter.h"
 #include "codegen.h"
 #include "colors.h"
-/* alphabetic order */
+
 
 using namespace std;
 using namespace Imp;
@@ -18,22 +18,43 @@ namespace Imp {
 
     void insert_back(vector<Instruction*>& target, const vector<Instruction*>& stuff);
 
+    bool check_init(Id *id);
+    bool check_init(Value *value);
+    void DEBUG(string msg) {
+        #ifdef DEBUG
+        cerr << Color::blue << "DEBUG " << Color::def << msg << endl;
+        #endif
+    }
     /*====================
         PROGRAM
     ====================*/
 
     vector<Instruction*> Program::gen_ir(Imp::label *lbl, Imp::Reg reg) {
-        // decl->gen_ir(lbl, R0);
+        DEBUG("begin PROGRAM");
+        decl->gen_ir(lbl, R0);
         vector<Instruction*> output = code->gen_ir(lbl, R1);
         output.push_back(Instruction::HALT(lbl));
+        DEBUG("end PROGRAM");
         return output;
     }
 
     vector<Instruction*> Declarations::gen_ir(Imp::label *lbl, Imp::Reg reg) {
+        // predeclare tmps?
         // declare all the symbols
+        DEBUG("begin DECLARATIONS");
         for(Id *id : ids) {
-            symbols.declare(id);
+            if (!symbols.declare(id)) {
+                ostringstream os;
+                os  << "Duplicate declaration of " << id->name
+                    << ": first declared in line "
+                    << symbols.get_var(id->name).line;
+                generator.report(os, id->line);
+            }
+            if (id->isArray()) {
+                symbols.set_array(id);
+            }
         }
+        DEBUG("end DECLARATIONS");
         return vector<Instruction*>();
     }
 
@@ -44,6 +65,7 @@ namespace Imp {
 
     /* @done do nothing lel */
     vector<Instruction*> Skip::gen_ir(Imp::label *lbl, Imp::Reg reg) {
+        DEBUG("SKIP");
         return vector<Instruction*>();
     }
 
@@ -53,11 +75,13 @@ namespace Imp {
 
     /* @done generate all teh commandses */
     vector<Instruction*> Commands::gen_ir(Imp::label *lbl, Imp::Reg reg) {
+        DEBUG("begin COMMANDS");
         vector<Instruction*> output;
         for(Command *cmd : cmds) {
             vector<Instruction*> cmd_out = cmd->gen_ir(lbl, R1);
             output.insert(output.end(), cmd_out.begin(), cmd_out.end());
         }
+        DEBUG("end COMMANDS");
         return output;
     }
 
@@ -67,14 +91,24 @@ namespace Imp {
 
     /* @done Assign a new value to a variable */
     vector<Instruction*> Assign::gen_ir(Imp::label *lbl, Imp::Reg reg) {
-        vector<Instruction*> out = expr->gen_ir(lbl, R1);
+        DEBUG("begin ASSIGN");
+        vector<Instruction*> out;
+        symbols.set_initialized(id);
+        if (symbols.is_iterator(id)) {
+            ostringstream os;
+            os << "Attempt to modify the iterator in a FOR loop: " << id->name;
+            generator.report(os, line);
+            return out;
+        }
+        insert_back(out, expr->gen_ir(lbl, R1));
         if(expr->op() == "Const" && !expr->left->isConst()) {
             Instruction::LOAD(out, R1, lbl);
         }
+
         vector<Instruction*> location = id->gen_ir(lbl, R0);
         out.insert(out.end(), location.begin(), location.end());
         Instruction::STORE(out, R1, lbl);
-
+        DEBUG("end ASSIGN");
         return out;
     }
 
@@ -127,23 +161,27 @@ namespace Imp {
     /*TODO*/
     vector<Instruction*> For::gen_ir(Imp::label *lbl, Imp::Reg reg) {
         // for: <Id> iterator, <Value> from, to, <Commands> body
+        vector<Instruction*> out;
         if (!symbols.declare(iterator)) {
             ostringstream os;
             os  << "Duplicate declaration of " << iterator->name
                 << ": first declared in line "
-                << symbols.get_var(iterator->name).line
-                << endl;
-            generator.report(os, line);
-            return vector<Instruction*>();
+                << symbols.get_var(iterator->name).line;
+            generator.report(os, iterator->line);
+            return out;
         }
 
+        if (! (check_init(from) && check_init(to))) {
+            return out;
+        }
         // TODO: check if body contains assignments to the iterator
 
         Symbol iter = symbols.get_var(iterator->name);
-
+        symbols.set_initialized(iterator);
+        symbols.set_iterator(iterator);
         // BEGIN LOOP
         // Initialize loop
-        vector<Instruction*> out;
+
         // r1 = FROM
         if (from->isConst()) {
             insert_back(out, generate_number(from->value, R1, lbl));
@@ -155,17 +193,20 @@ namespace Imp {
         insert_back(out, iterator->gen_ir(lbl, R0));
         Instruction::STORE(out, R1, lbl);
         Symbol to_var;
+        symbols.declare_tmp("_TO");
+        to_var = symbols.get_tmp("_TO");
+
         if (to->isConst()) {
             // initialize _TO
-            symbols.declare_tmp("_TO");
-            to_var = symbols.get_tmp("_TO");
             // to = r2 = TO
             insert_back(out, generate_number(to_var.offset, R0, lbl));
             insert_back(out, generate_number(to->value, R2, lbl));
             Instruction::STORE(out, R2, lbl);
         } else {
             insert_back(out, to->gen_ir(lbl, R0));
-            to_var = symbols.get_var(to->id->name);
+            Instruction::LOAD(out, R2, lbl);
+            insert_back(out, generate_number(to_var.offset, R0, lbl));
+            Instruction::STORE(out, R2, lbl);
         }
 
         // END initialization
@@ -223,13 +264,14 @@ namespace Imp {
         symbols.undeclare("_TO");
 
         symbols.undeclare(iterator->name);
-        cerr << "FOR: labels " << out.front()->label << " - "
-            << out.back()->label << endl;
+
         return out;
     }
 
     /* @done Read input into a variable */
     vector<Instruction*> Read::gen_ir(Imp::label *lbl, Imp::Reg reg) {
+        symbols.set_initialized(id);
+
         vector<Instruction*> out;
         auto id_addr = id->gen_ir(lbl, R0);
         insert_back(out, id_addr);
@@ -241,12 +283,18 @@ namespace Imp {
 
     /* @done Write value to the output */
     vector<Instruction*> Write::gen_ir(Imp::label *lbl, Imp::Reg reg) {
+        DEBUG("begin WRITE");
         vector<Instruction*> out;
+        if (! check_init(val)) {
+            return out;
+        }
+
         auto value_ref = val->gen_ir(lbl, reg);
         insert_back(out, value_ref);
         // out.insert(out.end(), value_ref.begin(), value_ref.end());
         if(!val->isConst()) { Instruction::LOAD(out, reg, lbl); }
         Instruction::PUT(out, reg, lbl);
+        DEBUG("end WRITE");
         return out;
     }
 
@@ -257,12 +305,18 @@ namespace Imp {
 
     /* @done put value in reg */
     vector<Instruction*> Const::gen_ir(Imp::label *lbl, Imp::Reg reg) {
+        if (! check_init(left)) {
+            return vector<Instruction*>();
+        }
         return left->gen_ir(lbl, reg);
     };
 
     /* @done Calculate left+right, result in r1. */
     vector<Instruction*> Plus::gen_ir(Imp::label *lbl, Imp::Reg reg) {
         vector<Instruction*> out;
+        if (! (check_init(left) && check_init(right))) {
+            return out;
+        }
         if (left->isConst() && right->isConst()) {
             // 2 compile-time constants: calculate value immediately
             number value = left->value + right->value;
@@ -290,6 +344,9 @@ namespace Imp {
     /* @done Calculate left - right, result in reg. */
     vector<Instruction*> Minus::gen_ir(Imp::label *lbl, Imp::Reg reg) {
         vector<Instruction*> out;
+        if (! (check_init(left) && check_init(right))) {
+            return out;
+        }
         if (left->isConst() && right->isConst()) {
             // 2 compile-time constants: calculate value immediately
             number value = left->value - right->value;
@@ -337,6 +394,9 @@ namespace Imp {
     /* @done Calculate left * right, result in r1 */
     vector<Instruction*> Mult::gen_ir(Imp::label *lbl, Imp::Reg reg) {
         vector<Instruction*> out;
+        if (! (check_init(left) && check_init(right))) {
+            return out;
+        }
         if (left->isConst() && right->isConst()) {
             // 2 compile-time constants: calculate value immediately
             number value = left->value * right->value;
@@ -403,6 +463,10 @@ namespace Imp {
             Instruction::SHR(out, R2, lbl);
             Instruction::JZERO(out, R2, *lbl+2, lbl);
             Instruction::JUMP(out, loop_start, lbl);
+
+            insert_back(out, generate_number(symbols.get_tmp("_RIGHT").offset, R0, lbl));
+            Instruction::ZERO(out, R3, lbl);
+            Instruction::STORE(out, R3, lbl);
             symbols.undeclare("_RIGHT");
         }
         return out;
@@ -418,27 +482,35 @@ namespace Imp {
     }
     /*TODO*/
     vector<Instruction*> Div::gen_ir(Imp::label *lbl, Imp::Reg reg) {
+        DEBUG("begin DIV");
         vector<Instruction*> out;
+        if (! (check_init(left) && check_init(right))) {
+            return out;
+        }
         // 2 constants
         if (left->isConst() && right->isConst()) {
-            return generate_number(left->value / left->value, R1, lbl);
+            DEBUG("end DIV: const, const");
+            if (right->value == 0) {
+                return generate_number(0, R1, lbl);
+            }
+            return generate_number(left->value / right->value, R1, lbl);
         }
         if (right->isConst()) {
             if (right->value == 1) {
                 out = left->gen_ir(lbl, R0);
                 Instruction::LOAD(out, R1, lbl);
+                DEBUG("end DIV: var, 1");
                 return out;
             } else if ((right->value & (right->value - 1)) == 0) {
+                // right is power of 2
                 out = left->gen_ir(lbl, R0);
                 Instruction::LOAD(out, R1, lbl);
-                // right is power of 2
                 long long val = right->value;
-                cerr << "debug: division by " << val << endl;
                 while (val > 1) {
                     Instruction::SHR(out, R1, lbl);
                     val /= 2;
                 }
-                cerr << out.size() << " shifts" << endl;
+                DEBUG("end DIV: var, 2^n");
                 return out;
             }
         }
@@ -547,22 +619,32 @@ namespace Imp {
         symbols.undeclare("_REMAIN");
         symbols.undeclare("_RESULT");
         symbols.undeclare("_MULT");
+        DEBUG("end DIV");
         return out;
 
     }
 
     /*TODO*/
     vector<Instruction*> Mod::gen_ir(Imp::label *lbl, Imp::Reg reg) {
+        vector<Instruction*> out;
+        if (! (check_init(left) && check_init(right))) {
+            return out;
+        }
         if (left->isConst() && right->isConst()) {
             return generate_number(left->value % left->value, R1, lbl);
         }
         if (right->isConst()) {
+            if (right->value == 0) {
+                Instruction::ZERO(out, R1, lbl);
+                return out;
+            }
             if (right->value == 1) {
-                auto out = left->gen_ir(lbl, R0);
+                out = left->gen_ir(lbl, R0);
                 Instruction::LOAD(out, R1, lbl);
                 return out;
             }
         }
+
         if (! (symbols.declare_tmp("_SCALED")
             && symbols.declare_tmp("_REMAIN")
             && symbols.declare_tmp("_RESULT")
@@ -572,7 +654,6 @@ namespace Imp {
                 exit(EXIT_FAILURE);
         }
 
-        vector<Instruction*> out;
         auto a = left;
         auto b = right;
         Symbol scaled = symbols.get_var("_SCALED");
@@ -668,6 +749,7 @@ namespace Imp {
         return out;
     }
 
+
     /*====================
         CONDITIONS
     ====================*/
@@ -675,6 +757,10 @@ namespace Imp {
     /* @done Set r1 to 1 if left == right, 0 otherwise*/
     vector<Instruction*> Eq::gen_ir(Imp::label *lbl, Imp::Reg reg) {
         vector<Instruction*> out;
+        if (! (check_init(left) && check_init(right))) {
+            return out;
+        }
+
         // r1 <- 0
         Instruction::ZERO(out, R1, lbl);
 
@@ -718,6 +804,9 @@ namespace Imp {
     /* @done Set R1 to 1 if left != right, 0 otherwise */
     vector<Instruction*> Neq::gen_ir(Imp::label *lbl, Imp::Reg reg) {
         vector<Instruction*> out;
+        if (! (check_init(left) && check_init(right))) {
+            return out;
+        }
         // r1 <- 0
         Instruction::ZERO(out, R1, lbl);
         Instruction::INC(out, R1, lbl);
@@ -761,7 +850,11 @@ namespace Imp {
 
     /* @done set R1 to 1 if left > right, 0 otherwise */
     vector<Instruction*> Gt::gen_ir(Imp::label *lbl, Imp::Reg reg) {
-        vector<Instruction*> out = Minus(left, right, line).gen_ir(lbl, R2);
+        vector<Instruction*> out;
+        if (! (check_init(left) && check_init(right))) {
+            return out;
+        }
+        insert_back(out, Minus(left, right, line).gen_ir(lbl, R2));
         Instruction::ZERO(out, R1, lbl);
         Instruction::JZERO(out, R2, *lbl+2, lbl);
         Instruction::INC(out, R1, lbl);
@@ -770,7 +863,11 @@ namespace Imp {
 
     /* @done set R1 to 1 if left < right, 0 otherwise */
     vector<Instruction*> Lt::gen_ir(Imp::label *lbl, Imp::Reg reg) {
-        vector<Instruction*> out = Minus(right, left, line).gen_ir(lbl, R2);
+        vector<Instruction*> out;
+        if (! (check_init(left) && check_init(right))) {
+            return out;
+        }
+        insert_back(out, Minus(right, left, line).gen_ir(lbl, R2));
         Instruction::ZERO(out, R1, lbl);
         Instruction::JZERO(out, R2, *lbl+2, lbl);
         Instruction::INC(out, R1, lbl);
@@ -779,7 +876,11 @@ namespace Imp {
 
     /* @done set R1 to 1 if left <= right, 0 otherwise */
     vector<Instruction*> Leq::gen_ir(Imp::label *lbl, Imp::Reg reg) {
-        vector<Instruction*> out = Minus(left, right, line).gen_ir(lbl, R2);
+        vector<Instruction*> out;
+        if (! (check_init(left) && check_init(right))) {
+            return out;
+        }
+        insert_back(out, Minus(left, right, line).gen_ir(lbl, R2));
         Instruction::ZERO(out, R1, lbl);
         Instruction::INC(out, R1, lbl);
         Instruction::JZERO(out, R2, *lbl+2, lbl);
@@ -790,7 +891,11 @@ namespace Imp {
 
     /* @done set R1 to 1 if left >= right, 0 otherwise */
     vector<Instruction*> Geq::gen_ir(Imp::label *lbl, Imp::Reg reg) {
-        vector<Instruction*> out = Minus(right, left, line).gen_ir(lbl, R2);
+        vector<Instruction*> out;
+        if (! (check_init(left) && check_init(right))) {
+            return out;
+        }
+        insert_back(out, Minus(right, left, line).gen_ir(lbl, R2));
         Instruction::ZERO(out, R1, lbl);
         Instruction::INC(out, R1, lbl);
         Instruction::JZERO(out, R2, *lbl+2, lbl);
@@ -817,8 +922,15 @@ namespace Imp {
         Symbol var = symbols.get_var(name);
         if (var.line == Symbol::Undefined) {
             ostringstream os;
-            os << "Undeclared variable " << name << "." << endl;
+            os << "Undeclared variable " << name << ".";
             generator.report(os, line);
+            return vector<Instruction*>();
+        }
+        if (var.isArray()) {
+            ostringstream os;
+            os << "Attempt to use an array " << name << " as a simple variable";
+            generator.report(os, line);
+            return vector<Instruction*>();
         }
         return generate_number(var.offset, reg, lbl);
     }
@@ -826,12 +938,25 @@ namespace Imp {
     /* @done reg = &arr[idx] */
     vector<Instruction*> ConstArray::gen_ir(Imp::label *lbl, Imp::Reg reg) {
         Symbol arr = symbols.get_var(name);
+        if (arr.line == Symbol::Undefined) {
+            ostringstream os;
+            os << "Undeclared variable " << name << ".";
+            generator.report(os, line);
+            return vector<Instruction*>();
+        }
+        if (!arr.isArray()) {
+            ostringstream os;
+            os << "Attempt to use a simple variable " << name << " as an array";
+            generator.report(os, line);
+            return vector<Instruction*>();
+        }
         if (idx >= arr.size) {
             ostringstream os;
-            os << "Attempt to access array " << arr.name
+            os << "Attempt to access array " << name
                 << " at index " << idx
-                << "(size: " << arr.size << ")." << endl;
+                << "(size: " << arr.size << ").";
             generator.report(os, line);
+            return vector<Instruction*>();
         }
 
         return generate_number(arr.offset+idx, reg, lbl);
@@ -840,11 +965,21 @@ namespace Imp {
 
     /* @done reg = &arr[idx] */
     vector<Instruction*> VarArray::gen_ir(Imp::label *lbl, Imp::Reg reg) {
-        // if (reg == R0) {
-        //     cerr << "possible register overwrite" << endl;
-        // }
         Symbol arr = symbols.get_var(name);
-        auto out = generate_number(arr.offset, R4, lbl);
+        vector<Instruction*> out;
+        if (arr.line == Symbol::Undefined) {
+            ostringstream os;
+            os << "Undeclared variable " << name << ".";
+            generator.report(os, line);
+            return out;
+        }
+        if (!arr.isArray()) {
+            ostringstream os;
+            os << "Attempt to use a simple variable " << name << " as an array";
+            generator.report(os, line);
+            return out;
+        }
+        out = generate_number(arr.offset, R4, lbl);
         auto idx_val = idx->gen_ir(lbl, R0);
         out.insert(out.end(), idx_val.begin(), idx_val.end());
         Instruction::ADD(out, R4, lbl);
@@ -890,5 +1025,22 @@ namespace Imp {
 
     void insert_back(vector<Instruction*>& target, const vector<Instruction*>& stuff) {
         target.insert(target.end(), stuff.begin(), stuff.end());
+    }
+
+    bool check_init(Id *id) {
+        if (! symbols.is_initialized(id)) {
+            ostringstream os;
+            os << "Attempt to read uninitialized variable " << id->name;
+            generator.report(os, id->line);
+            return false;
+        }
+        return true;
+    }
+
+    bool check_init(Value *value) {
+        if (value->isConst()) {
+            return true;
+        }
+        return check_init(value->id);
     }
 }

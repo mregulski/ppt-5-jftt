@@ -47,7 +47,6 @@ namespace Imp {
 
     bool SymTable::declare(Id *id) {
         if(table.find(id->name) != table.end()) {
-            yynerrs++;
             return false;
         }
         else {
@@ -61,6 +60,45 @@ namespace Imp {
             offset += var.size;
             table[id->name] = var;
             return true;
+        }
+    }
+
+    bool SymTable::is_initialized(Id *id) {
+        if(table.find(id->name) == table.end()) {
+            return false;
+        }
+        return table[id->name].initialized;
+    }
+
+    void SymTable::set_initialized(Id *id) {
+        if(table.find(id->name) == table.end()) {
+            return;
+        } else {
+            table[id->name].initialized = true;
+        }
+    }
+
+    bool SymTable::is_iterator(Id *id) {
+        if(table.find(id->name) == table.end()) {
+            return false;
+        }
+        return table[id->name].iterator;
+    }
+    void SymTable::set_iterator(Id *id) {
+        if(table.find(id->name) == table.end()) {
+            return;
+        } else {
+            table[id->name].iterator = true;
+        }
+    }
+
+    void SymTable::set_array(Id *id) {
+        if(table.find(id->name) == table.end()) {
+            return;
+        } else {
+            table[id->name].array = true;
+            // treat all arrays as initialized
+            table[id->name].initialized = true;
         }
     }
 }

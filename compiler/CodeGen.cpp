@@ -1,8 +1,8 @@
 #include <vector>
-#include "CodeGen.h"
-#include "Node.h"
-#include "Inter.h"
-#include "Colors.h"
+#include "codegen.h"
+#include "node.h"
+#include "inter.h"
+#include "colors.h"
 using namespace std;
 namespace Imp {
     vector<Instruction *> CodeGen::generate(Node *root) {
@@ -12,7 +12,7 @@ namespace Imp {
     void CodeGen::generate_to(ostream &stream, Node *root) {
         auto code = root->gen_ir(&instruction_counter, Imp::R1);
         if (n_error > 0) {
-            cerr << "Compilation failed: " << n_error << " errors found." << endl;
+            cerr << "Compilation" << Color::red << " failed: " << Color::def <<  n_error << " errors found." << endl;
         } else {
             cerr << "output size: " << code.size() << endl;
             for(int i = 0; i < code.size(); i++) {

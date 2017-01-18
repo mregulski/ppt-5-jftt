@@ -27,6 +27,7 @@ namespace Color {
     };
 
     const Modifier red(Color::FG_RED);
+    const Modifier blue(Color::FG_BLUE);
     const Modifier green(Color::FG_GREEN);
     const Modifier def(Color::FG_DEFAULT);
 }

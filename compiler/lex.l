@@ -7,7 +7,7 @@
 
     #define TOKEN(t) return (yylval.token = t)
     #define SAVE_INT yylval.val = strtoll(yytext, NULL, 10)
-
+    extern int CUR_LINE;
 
     // extern int yylex(YYSTYPE *lvalp, YYLTYPE *llocp);
 %}
@@ -16,7 +16,8 @@
 %%
 "{"             BEGIN(COMMENT);
 <COMMENT>"}"    BEGIN(INITIAL);
-<COMMENT>.|\n   ;
+<COMMENT>.      ;
+<COMMENT>\n     ; CUR_LINE++;
 [_a-z]+         {
                     yylval.text = (char *) malloc(yyleng * sizeof(char) + 1);
                     strcpy(yylval.text, yytext);
@@ -56,7 +57,7 @@
 ";"             { TOKEN(ENDSTMT); }
 "["             { TOKEN(BRACKET_OPEN); }
 "]"             { TOKEN(BRACKET_CLOSE); }
-"\n"            { /* allow yylineno to update */ }
+"\n"            { CUR_LINE++; }
 [ \t]           ;
 .               ;
 %%
