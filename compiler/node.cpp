@@ -7,6 +7,12 @@
 #include "codegen.h"
 #include "colors.h"
 
+#ifdef DEBUG
+#ifndef INFO
+#define INFO 1
+#endif
+#endif
+
 
 using namespace std;
 using namespace Imp;
@@ -20,41 +26,84 @@ namespace Imp {
 
     bool check_init(Id *id);
     bool check_init(Value *value);
-    void DEBUG(string msg) {
-        #ifdef DEBUG
-        cerr << Color::blue << "DEBUG " << Color::def << msg << endl;
+    void log_DEBUG(string msg) {
+        #ifdef log_DEBUG
+        cerr << Color::yellow << "log_DEBUG: " << Color::def << msg << endl;
         #endif
     }
-    /*====================
+    void log_INFO(string msg) {
+        #ifdef log_INFO
+        cerr << Color::cyan << "log_INFO: " << Color::def << msg << endl;
+        #endif
+    }
+
+    /*========================================
         PROGRAM
-    ====================*/
+    ========================================*/
 
     vector<Instruction*> Program::gen_ir(Imp::label *lbl, Imp::Reg reg) {
-        DEBUG("begin PROGRAM");
+        log_DEBUG("begin PROGRAM");
         decl->gen_ir(lbl, R0);
         vector<Instruction*> output = code->gen_ir(lbl, R1);
         output.push_back(Instruction::HALT(lbl));
-        DEBUG("end PROGRAM");
+        log_DEBUG("end PROGRAM");
         return output;
     }
 
+    void err_redeclaration(string tag, Id *id) {
+        ostringstream os;
+        os  << "[" << tag << "] Duplicate declaration of " << id->name
+            << ": first declared in line "
+            << symbols.get_var(id->name).line;
+        generator.report(os, id->line);
+    }
+
+    /*
+        Declare all the symbols.
+        Memory layout:
+        [TMPS | VARS | 2*for_counter cells | ARRAYS ]
+        FOR loops declare their identifiers and _TO temporaries in the empty space.
+        Kinda wasteful, but better than leaving them behind the arrays.
+    */
     vector<Instruction*> Declarations::gen_ir(Imp::label *lbl, Imp::Reg reg) {
-        // predeclare tmps?
-        // declare all the symbols
-        DEBUG("begin DECLARATIONS");
+        // predeclare tmps
+        for(int i = 0; i < 5; i++) {
+            symbols.declare_tmp("_TMP"+to_string(i));
+        }
+        log_DEBUG("DECLARATIONS");
+        vector<Id*> vars;
+        vector<Id*> iters;
+        vector<Id*> arrays;
+        // split ids by type
         for(Id *id : ids) {
-            if (!symbols.declare(id)) {
-                ostringstream os;
-                os  << "Duplicate declaration of " << id->name
-                    << ": first declared in line "
-                    << symbols.get_var(id->name).line;
-                generator.report(os, id->line);
-            }
             if (id->isArray()) {
-                symbols.set_array(id);
+                arrays.push_back(id);
+            } else if (id->isIter()) {
+                iters.push_back(id);
+            } else {
+                vars.push_back(id);
             }
         }
-        DEBUG("end DECLARATIONS");
+        #ifdef log_DEBUG
+        ostringstream dbg;
+        dbg << "Variables: " << vars.size() << endl
+            << "Arrays: " << arrays.size() << endl
+            << "Iterators: " << iters.size() << endl;
+        log_DEBUG(db.str());
+        #endif
+        for (Id *id : vars) {
+            if (!symbols.declare(id)) {
+                err_redeclaration("DECL", id);
+            }
+        }
+        symbols.alloc_for_control(for_counter);
+        for (Id *id : arrays) {
+            if(!symbols.declare(id)) {
+                err_redeclaration("DECL", id);
+            }
+            symbols.set_array(id);
+        }
+
         return vector<Instruction*>();
     }
 
@@ -65,23 +114,23 @@ namespace Imp {
 
     /* @done do nothing lel */
     vector<Instruction*> Skip::gen_ir(Imp::label *lbl, Imp::Reg reg) {
-        DEBUG("SKIP");
+        log_DEBUG("SKIP");
         return vector<Instruction*>();
     }
 
-    /*====================
+    /*========================================
         COMMANDS
-    ====================*/
+    ========================================*/
 
     /* @done generate all teh commandses */
     vector<Instruction*> Commands::gen_ir(Imp::label *lbl, Imp::Reg reg) {
-        DEBUG("begin COMMANDS");
+        log_DEBUG("begin COMMANDS");
         vector<Instruction*> output;
         for(Command *cmd : cmds) {
             vector<Instruction*> cmd_out = cmd->gen_ir(lbl, R1);
             output.insert(output.end(), cmd_out.begin(), cmd_out.end());
         }
-        DEBUG("end COMMANDS");
+        log_DEBUG("end COMMANDS");
         return output;
     }
 
@@ -91,7 +140,7 @@ namespace Imp {
 
     /* @done Assign a new value to a variable */
     vector<Instruction*> Assign::gen_ir(Imp::label *lbl, Imp::Reg reg) {
-        DEBUG("begin ASSIGN");
+        log_DEBUG("begin ASSIGN");
         vector<Instruction*> out;
         symbols.set_initialized(id);
         if (symbols.is_iterator(id)) {
@@ -108,7 +157,7 @@ namespace Imp {
         vector<Instruction*> location = id->gen_ir(lbl, R0);
         out.insert(out.end(), location.begin(), location.end());
         Instruction::STORE(out, R1, lbl);
-        DEBUG("end ASSIGN");
+        log_DEBUG("end ASSIGN");
         return out;
     }
 
@@ -162,7 +211,8 @@ namespace Imp {
     vector<Instruction*> For::gen_ir(Imp::label *lbl, Imp::Reg reg) {
         // for: <Id> iterator, <Value> from, to, <Commands> body
         vector<Instruction*> out;
-        if (!symbols.declare(iterator)) {
+        log_INFO("FOR: " + to_string(id));
+        if (!symbols.declare_iterator(iterator)) {
             ostringstream os;
             os  << "Duplicate declaration of " << iterator->name
                 << ": first declared in line "
@@ -193,8 +243,14 @@ namespace Imp {
         insert_back(out, iterator->gen_ir(lbl, R0));
         Instruction::STORE(out, R1, lbl);
         Symbol to_var;
-        symbols.declare_tmp("_TO");
-        to_var = symbols.get_tmp("_TO");
+
+        // prepare _TO temporary
+        Id *_to = new Var("_TO_" + to_string(id), Id::NORMAL, line);
+        if(!symbols.declare_iterator(_to)) {
+            cerr << "CANNOT DECLARE _TO: LINE "<< line << endl;
+            exit(EXIT_FAILURE);
+        };
+        to_var = symbols.get_var(_to->name);
 
         if (to->isConst()) {
             // initialize _TO
@@ -261,9 +317,9 @@ namespace Imp {
 
         // END LOOP
 
-        symbols.undeclare("_TO");
+        symbols.undeclare_iter(_to->name);
 
-        symbols.undeclare(iterator->name);
+        symbols.undeclare_iter(iterator->name);
 
         return out;
     }
@@ -283,7 +339,7 @@ namespace Imp {
 
     /* @done Write value to the output */
     vector<Instruction*> Write::gen_ir(Imp::label *lbl, Imp::Reg reg) {
-        DEBUG("begin WRITE");
+        log_DEBUG("begin WRITE");
         vector<Instruction*> out;
         if (! check_init(val)) {
             return out;
@@ -294,14 +350,14 @@ namespace Imp {
         // out.insert(out.end(), value_ref.begin(), value_ref.end());
         if(!val->isConst()) { Instruction::LOAD(out, reg, lbl); }
         Instruction::PUT(out, reg, lbl);
-        DEBUG("end WRITE");
+        log_DEBUG("end WRITE");
         return out;
     }
 
 
-    /*====================
+    /*========================================
         EXPRESSION
-    ====================*/
+    ========================================*/
 
     /* @done put value in reg */
     vector<Instruction*> Const::gen_ir(Imp::label *lbl, Imp::Reg reg) {
@@ -359,10 +415,11 @@ namespace Imp {
             Instruction::SUB(out, reg, lbl);
         } else if (right->isConst()) {
             // create temp variable for the constant
-            symbols.declare_tmp("_SUB");
-            auto tmp = symbols.get_tmp("_SUB");
+            // symbols.declare_tmp("_SUB");
+            auto tmp = symbols.get_var("_TMP0");
             out = generate_number(tmp.offset, R0, lbl);
-
+            Instruction::ZERO(out, R4, lbl);
+            Instruction::STORE(out, R4, lbl);
             //
             auto constant = right->gen_ir(lbl, reg);
             out.insert(out.end(), constant.begin(), constant.end());
@@ -445,12 +502,15 @@ namespace Imp {
             auto right_ref = right->gen_ir(lbl, R0);
             out.insert(out.end(), right_ref.begin(), right_ref.end());
             Instruction::LOAD(out, R3, lbl);
-            if(!symbols.declare_tmp("_RIGHT")) {
-                cerr << "[ERROR] (internal) Unable to declare temporary variable" << endl;
-                exit(EXIT_FAILURE);
-            }
-            auto tmp_ref = generate_number(symbols.get_tmp("_RIGHT").offset, R0, lbl);
-            out.insert(out.end(), tmp_ref.begin(), tmp_ref.end());
+            // if(!symbols.declare_tmp("_RIGHT")) {
+            //     cerr << "[ERROR] (internal) Unable to declare temporary variable" << endl;
+            //     exit(EXIT_FAILURE);
+            // }
+            auto tmp = symbols.get_var("_TMP0");
+            insert_back(out, generate_number(tmp.offset, R0, lbl));
+            Instruction::ZERO(out, R4, lbl);
+            Instruction::STORE(out, R4, lbl);
+
             Instruction::STORE(out, R3, lbl);
 
             auto loop_start = *lbl;
@@ -464,10 +524,9 @@ namespace Imp {
             Instruction::JZERO(out, R2, *lbl+2, lbl);
             Instruction::JUMP(out, loop_start, lbl);
 
-            insert_back(out, generate_number(symbols.get_tmp("_RIGHT").offset, R0, lbl));
+            insert_back(out, generate_number(tmp.offset, R0, lbl));
             Instruction::ZERO(out, R3, lbl);
             Instruction::STORE(out, R3, lbl);
-            symbols.undeclare("_RIGHT");
         }
         return out;
     }
@@ -482,24 +541,28 @@ namespace Imp {
     }
     /*TODO*/
     vector<Instruction*> Div::gen_ir(Imp::label *lbl, Imp::Reg reg) {
-        DEBUG("begin DIV");
+        log_DEBUG("begin DIV");
         vector<Instruction*> out;
         if (! (check_init(left) && check_init(right))) {
             return out;
         }
         // 2 constants
         if (left->isConst() && right->isConst()) {
-            DEBUG("end DIV: const, const");
+            log_DEBUG("end DIV: const, const");
             if (right->value == 0) {
                 return generate_number(0, R1, lbl);
             }
             return generate_number(left->value / right->value, R1, lbl);
         }
         if (right->isConst()) {
+            if (right->value == 0) {
+                Instruction::ZERO(out, R1, lbl);
+                return out;
+            }
             if (right->value == 1) {
                 out = left->gen_ir(lbl, R0);
                 Instruction::LOAD(out, R1, lbl);
-                DEBUG("end DIV: var, 1");
+                log_DEBUG("end DIV: var, 1");
                 return out;
             } else if ((right->value & (right->value - 1)) == 0) {
                 // right is power of 2
@@ -510,26 +573,26 @@ namespace Imp {
                     Instruction::SHR(out, R1, lbl);
                     val /= 2;
                 }
-                DEBUG("end DIV: var, 2^n");
+                log_DEBUG("end DIV: var, 2^n");
                 return out;
             }
         }
 
         /*DUM DUM DUM*/
-        if (! (symbols.declare_tmp("_SCALED")
-            && symbols.declare_tmp("_REMAIN")
-            && symbols.declare_tmp("_RESULT")
-            && symbols.declare_tmp("_MULT"))) {
-                cerr << "[Internal error] Div::gen_ir: Unable to declare temporary variable."
-                    << endl;
-                exit(EXIT_FAILURE);
-        }
+        // if (! (symbols.declare_tmp("_SCALED")
+        //     && symbols.declare_tmp("_REMAIN")
+        //     && symbols.declare_tmp("_RESULT")
+        //     && symbols.declare_tmp("_MULT"))) {
+        //         cerr << "[Internal error] Div::gen_ir: Unable to declare temporary variable."
+        //             << endl;
+        //         exit(EXIT_FAILURE);
+        // }
         auto a = left;
         auto b = right;
-        Symbol scaled = symbols.get_var("_SCALED");
-        Symbol remain = symbols.get_var("_REMAIN");
-        Symbol result = symbols.get_var("_RESULT");
-        Symbol mult = symbols.get_var("_MULT");
+        Symbol scaled = symbols.get_var("_TMP0");
+        Symbol remain = symbols.get_var("_TMP1");
+        Symbol result = symbols.get_var("_TMP2");
+        Symbol mult = symbols.get_var("_TMP3");
 
         // Wipe the fuck outta' temps
         Instruction::ZERO(out, R1, lbl);
@@ -615,11 +678,7 @@ namespace Imp {
 
         insert_back(out, generate_number(result.offset, R0, lbl));
         Instruction::LOAD(out, R1, lbl);
-        symbols.undeclare("_SCALED");
-        symbols.undeclare("_REMAIN");
-        symbols.undeclare("_RESULT");
-        symbols.undeclare("_MULT");
-        DEBUG("end DIV");
+        log_DEBUG("end DIV");
         return out;
 
     }
@@ -638,28 +697,29 @@ namespace Imp {
                 Instruction::ZERO(out, R1, lbl);
                 return out;
             }
-            if (right->value == 1) {
-                out = left->gen_ir(lbl, R0);
-                Instruction::LOAD(out, R1, lbl);
-                return out;
-            }
+            // if (right->value == 1) {
+            //     // out = left->gen_ir(lbl, R0);
+            //     Instruction::ZERO(out, R1, lbl);
+            //     Instruction::INC(out, R1, lbl);
+            //     return out;
+            // }
         }
 
-        if (! (symbols.declare_tmp("_SCALED")
-            && symbols.declare_tmp("_REMAIN")
-            && symbols.declare_tmp("_RESULT")
-            && symbols.declare_tmp("_MULT"))) {
-                cerr << "[Internal error] Div::gen_ir: Unable to declare temporary variable."
-                    << endl;
-                exit(EXIT_FAILURE);
-        }
+        // if (! (symbols.declare_tmp("_SCALED")
+        //     && symbols.declare_tmp("_REMAIN")
+        //     && symbols.declare_tmp("_RESULT")
+        //     && symbols.declare_tmp("_MULT"))) {
+        //         cerr << "[Internal error] Div::gen_ir: Unable to declare temporary variable."
+        //             << endl;
+        //         exit(EXIT_FAILURE);
+        // }
 
         auto a = left;
         auto b = right;
-        Symbol scaled = symbols.get_var("_SCALED");
-        Symbol remain = symbols.get_var("_REMAIN");
-        Symbol result = symbols.get_var("_RESULT");
-        Symbol mult = symbols.get_var("_MULT");
+        Symbol scaled = symbols.get_var("_TMP0");
+        Symbol remain = symbols.get_var("_TMP1");
+        Symbol result = symbols.get_var("_TMP2");
+        Symbol mult = symbols.get_var("_TMP3");
 
         // Wipe the fuck outta' temps
         Instruction::ZERO(out, R1, lbl);
@@ -742,17 +802,17 @@ namespace Imp {
         Instruction::JUMP(out, loop2, lbl);
         insert_back(out, generate_number(remain.offset, R0, lbl));
         Instruction::LOAD(out, R1, lbl);
-        symbols.undeclare("_SCALED");
-        symbols.undeclare("_REMAIN");
-        symbols.undeclare("_RESULT");
-        symbols.undeclare("_MULT");
+        // symbols.undeclare("_SCALED");
+        // symbols.undeclare("_REMAIN");
+        // symbols.undeclare("_RESULT");
+        // symbols.undeclare("_MULT");
         return out;
     }
 
 
-    /*====================
+    /*========================================
         CONDITIONS
-    ====================*/
+    ========================================*/
 
     /* @done Set r1 to 1 if left == right, 0 otherwise*/
     vector<Instruction*> Eq::gen_ir(Imp::label *lbl, Imp::Reg reg) {
@@ -903,9 +963,9 @@ namespace Imp {
         return out;
     }
 
-    /*====================
+    /*========================================
         VARIABLES
-    ====================*/
+    ========================================*/
     /* @done reg = value || r0 = value */
     vector<Instruction*> Value::gen_ir(Imp::label *lbl, Imp::Reg reg) {
         vector<Instruction*> out;

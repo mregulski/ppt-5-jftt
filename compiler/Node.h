@@ -40,17 +40,35 @@ namespace Imp{
         TOP-LEVEL
     ===============*/
     class Id : public Node {
-        bool array;
+        bool array=false;
+        bool iter=false;
         public:
+            enum Type { NORMAL, ARRAY, ITER };
             bool isArray() { return array; }
-            std::string name;
-            Id(std::string name, bool array, int line) : name(name), array(array), Node(line) {}
+            bool isIter() { return iter; }
+            std::string name="";
+            Id(std::string name, Type type, int line) : name(name), Node(line) {
+                switch(type) {
+                    case ARRAY:
+                        array = true;
+                        break;
+                    case ITER:
+                        iter = true;
+                        break;
+                    default:
+                        array=iter=false;
+                }
+            }
     };
 
     class Declarations: public Node {
         std::vector<Id*> ids;
+        unsigned long for_counter = 0;
         public:
             void declare(Id *id);
+            long long report_for() {
+                return for_counter++;
+            }
             std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
             std::ostream& dump(std::ostream &stream, int depth) {
                 stream << indent(depth) << "Declarations(" << ids.size() << ")\n";
@@ -213,6 +231,8 @@ namespace Imp{
     };
 
     class For : public Command {
+        private:
+            long long id;
         public:
             Id *iterator;
             Value *from;
@@ -220,9 +240,9 @@ namespace Imp{
             Commands *body;
             bool isDownTo;
 
-            For(Id *iter, Value *from, Value *to, Commands *body, bool isDownTo, int line)
+            For(Id *iter, Value *from, Value *to, Commands *body, bool isDownTo, int line, long long id)
                 : iterator(iter), from(from), to(to),
-                    body(body), isDownTo(isDownTo), Command(line) {}
+                    body(body), isDownTo(isDownTo), Command(line), id(id) {}
 
             std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
             virtual std::ostream& dump(std::ostream& stream, int depth) {
@@ -382,7 +402,8 @@ namespace Imp{
     // Variable declaration or access
     class Var : public Id {
         public:
-            Var(std::string name, int line) : Id(name, false, line) {}
+            Var(std::string name, int line) : Id(name, NORMAL, line) {}
+            Var(std::string name, Type type, int line) : Id(name, type, line) {}
             std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
             virtual std::ostream& dump(std::ostream& stream, int depth) {
                 return stream << indent(depth) << "Var(" << name << ")\n";
@@ -394,7 +415,7 @@ namespace Imp{
     class ConstArray : public Id {
         public:
             number idx;
-            ConstArray(std::string name, number idx, int line) : Id(name, true, line), idx(idx) {}
+            ConstArray(std::string name, number idx, int line) : Id(name, ARRAY, line), idx(idx) {}
             std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
             virtual std::ostream& dump(std::ostream& stream, int depth) {
                 return stream << indent(depth) << "ConstArray(" << name << ", " << idx << ")\n";
@@ -405,7 +426,7 @@ namespace Imp{
     class VarArray : public Id {
         public:
             Var* idx;
-            VarArray(std::string name, Var *idx, int line) : Id(name, true, line), idx(idx) {}
+            VarArray(std::string name, Var *idx, int line) : Id(name, ARRAY, line), idx(idx) {}
             std::vector<Instruction*> gen_ir(Imp::label *cur_label, Imp::Reg reg);
             virtual std::ostream& dump(std::ostream& stream, int depth) {
                 return stream << indent(depth) << "VarArray(" << name << ", " << idx->name << ")\n";

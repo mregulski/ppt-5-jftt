@@ -1,13 +1,17 @@
 OUT_DIR=./bin
 WORK_DIR=./build
 COMPILE=clang++ -std=c++11 -Wno-deprecated-register
+DEBUG=
+.PHONY: debug
 
-debug: DEBUG= -g -O0 -DDEBUG1
-debug: clean parser interpreter
+build: compiler interpreter
 
-parser: out_dir work_dir lex grammar
+debug: DEBUG += -g -O0 -DDEBUG
+debug: build
+
+compiler: out_dir work_dir lex grammar
 	cp *.h $(WORK_DIR)/
-	$(COMPILE) $(WORK_DIR)/lex.yy.c $(WORK_DIR)/grammar.tab.c *.cpp -o $(OUT_DIR)/parser -lfl $(DEBUG)
+	$(COMPILE) $(WORK_DIR)/lex.yy.c $(WORK_DIR)/grammar.tab.c *.cpp -o $(OUT_DIR)/compiler -lfl $(DEBUG)
 
 interpreter: out_dir
 	$(COMPILE) example/interpreter.cc -o $(OUT_DIR)/interpreter $(DEBUG)

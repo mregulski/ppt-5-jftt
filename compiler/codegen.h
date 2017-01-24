@@ -12,7 +12,7 @@ namespace Imp {
         long long n_error = 0;
         public:
             std::vector<Instruction *> generate(Node *root);
-            void generate_to(std::ostream &stream, Node *root);
+            bool generate_to(std::ostream &stream, Node *root);
             void report(std::string error, long long line);
             void report(std::ostringstream& error, long long line);
     };

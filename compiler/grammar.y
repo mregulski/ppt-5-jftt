@@ -26,7 +26,7 @@
     }
     extern Imp::Node *root;
     extern Imp::SymTable symbols;
-    Imp::Node *decls = NULL;
+    Imp::Declarations *decls = NULL;
     int CUR_LINE = 1;
 %}
 
@@ -99,11 +99,15 @@ command:
     |   IF condition THEN commands ELSE commands ENDIF { $$ = new Imp::If($2, $4, $6, CUR_LINE); }
     |   WHILE condition DO commands ENDWHILE { $$ = new Imp::While($2, $4, CUR_LINE); }
     |   FOR PIDENTIFIER FROM value TO value DO commands ENDFOR {
-            Imp::Var *iterator = new Imp::Var($2, CUR_LINE);
-            $$ = new Imp::For(iterator, $4, $6, $8, false, CUR_LINE);
+            Imp::Var *iterator = new Imp::Var($2, Imp::Id::ITER, CUR_LINE);
+            decls->declare(iterator);
+            $$ = new Imp::For(iterator, $4, $6, $8, false, CUR_LINE, decls->report_for());
+
         }
     |   FOR PIDENTIFIER FROM value DOWNTO value DO commands ENDFOR {
-            $$ = new Imp::For(new Imp::Var($2, CUR_LINE), $4, $6, $8, true, CUR_LINE);
+            Imp::Var *iterator = new Imp::Var($2, Imp::Id::ITER, CUR_LINE);
+            decls->declare(iterator);
+            $$ = new Imp::For(iterator, $4, $6, $8, true, CUR_LINE, decls->report_for());
         }
     |   READ identifier ENDSTMT { $$ = new Imp::Read($2, CUR_LINE); }
     |   WRITE value ENDSTMT { $$ = new Imp::Write($2, CUR_LINE); }

@@ -10,12 +10,12 @@
 
 namespace Imp {
     class Symbol {
-        private:
         public:
             static const long long Undefined = -10;
             bool array = false;
             bool initialized = false;
             bool iterator = false;
+            bool available = true;
             std::string name;
             long long size;
             long long offset;
@@ -31,8 +31,8 @@ namespace Imp {
                 std::ostringstream stream;
                 stream << "{\n\tname: " << name;
                 if (array) { stream << " (array :" << size << ")"; }
-                stream << "\n\t definition: line " << line;
-                stream << "\n\t memory location: " << offset << "\n}" << std::endl;
+                stream << "\n\tdefinition: line " << line;
+                stream << "\n\tmemory location: " << offset << "\n}" << std::endl;
                 return stream.str();
             }
     };
@@ -40,10 +40,12 @@ namespace Imp {
     class SymTable {
         public:
             Symbol get_var(std::string name);
-            Symbol get_tmp(std::string name);
-            bool declare_tmp(std::string name);
-            bool undeclare(std::string name);
             bool declare(Id *id);
+            bool declare_tmp(std::string name);
+            bool declare_iterator(Id *iter);
+            bool undeclare(std::string name);
+            bool undeclare_iter(std::string name);
+            void alloc_for_control(long for_count);
             bool is_initialized(Id *id);
             void set_initialized(Id *id);
             bool is_iterator(Id *id);
@@ -58,9 +60,10 @@ namespace Imp {
             }
         private:
             long long offset = 0;
+            long long for_offset = 0;
             std::unordered_map<std::string, Symbol> table;
 
-            // todo: use map + queue instead of monotone offset
+            // todo: use map + queue instead of monotone offset?
             // std::map<unsigned long long, Symbol> memory;
             // std:dequeue<unsigned long long> mem_locations;
     };

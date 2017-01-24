@@ -3,7 +3,7 @@
 #include "inter.h"
 #include "symtable.h"
 #include "codegen.h"
-
+#include "colors.h"
 #ifndef YYDEBUG
     #define YYDEBUG 0
 #endif
@@ -21,17 +21,18 @@ int main() {
     yydebug = YYDEBUG;
     int syntaxInvalid = yyparse();
     if (syntaxInvalid || errors > 0) {
-        cerr << "Error compiling file: " << errors << " errors found" << endl;
-        return 0;
+        cerr << "Error compiling file: " << errors << " syntax errors found" << endl;
+        return 1;
     } else {
-        cerr << "No syntax errors" << endl;
+        cerr << Color::green << "No syntax errors" << Color::def << endl;
         if (root != NULL) {
-            cerr << "====================\n\tAST\n====================" << endl;
+            cerr << Color::cyan << string(40, '=') << endl
+                << "\tAST" << endl
+                << string(40, '=') << Color::def << endl;
             ((Program *)root)->dump(cerr, 0);
-            cerr << "====================\n\tSYMBOLS\n====================" << endl;
-            symbols.dump(cerr);
-            cerr << "====================\n\tOUTPUT\n====================" << endl;
-            generator.generate_to(cout, root);
+
+            bool result = generator.generate_to(cout, root);
+            return !result;
         }
     }
     return 1;

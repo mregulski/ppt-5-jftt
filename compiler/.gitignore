@@ -2,3 +2,4 @@ build/
 .vscode/
 bin/
 test_out/
+output/

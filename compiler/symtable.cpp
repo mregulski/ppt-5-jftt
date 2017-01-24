@@ -15,36 +15,6 @@ namespace Imp {
         cerr << "Error: near line " << loc << ": " << msg << endl;
     }
 
-    Symbol SymTable::get_var(string name) {
-        if (table.find(name) != table.end()) {
-            return table[name];
-        }
-        return Symbol();
-    }
-
-    Symbol SymTable::get_tmp(string name) {
-        return get_var(name);
-    }
-
-    bool SymTable::declare_tmp(string name) {
-        if(table.find(name) != table.end()) {
-            return false;
-        }
-        Symbol var = Symbol(name, -1, offset);
-        offset += var.size;
-        table[name] = var;
-        return true;
-    }
-
-    bool SymTable::undeclare(string name) {
-        if(table.find(name) == table.end()) { return true; }
-        // if (table[name].offset+table[name].size == offset) {
-        //     offset -= table[name].size;
-        // }
-        table.erase(name);
-        return true;
-    }
-
     bool SymTable::declare(Id *id) {
         if(table.find(id->name) != table.end()) {
             return false;
@@ -62,6 +32,56 @@ namespace Imp {
             return true;
         }
     }
+
+    bool SymTable::declare_iterator(Id *iter) {
+        if(table.find(iter->name) != table.end() && !table[iter->name].available) {
+            return false;
+        }
+        else {
+            Symbol var;
+            var = Symbol(iter->name, iter->line, for_offset);
+            for_offset += var.size;
+            table[iter->name] = var;
+            table[iter->name].available = false;
+            return true;
+        }
+    }
+
+    bool SymTable::declare_tmp(string name) {
+        if(table.find(name) != table.end()) {
+            return false;
+        }
+        Symbol var = Symbol(name, 0, offset);
+        offset += var.size;
+        table[name] = var;
+        return true;
+    }
+
+    void SymTable::alloc_for_control(long for_count) {
+        for_offset = offset;
+        offset += for_count*2;
+    }
+
+    Symbol SymTable::get_var(string name) {
+        if (table.find(name) != table.end()) {
+            return table[name];
+        }
+        return Symbol();
+    }
+
+    // to be used with FOR-related vars
+    bool SymTable::undeclare_iter(string name) {
+        if(table.find(name) == table.end()) { return true; }
+        table[name].available = true;
+        return true;
+    }
+
+    bool SymTable::undeclare(string name) {
+        if(table.find(name) == table.end() ) { return true; }
+        table.erase(name);
+        return true;
+    }
+
 
     bool SymTable::is_initialized(Id *id) {
         if(table.find(id->name) == table.end()) {
