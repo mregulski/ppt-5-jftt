@@ -1,5 +1,9 @@
-build/
+221523/
 .vscode/
+build/
 bin/
-test_out/
+example/
+example2/
 output/
+test_out/
+*.zip

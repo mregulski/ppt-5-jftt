@@ -27,14 +27,23 @@ namespace Imp {
     bool check_init(Id *id);
     bool check_init(Value *value);
     void log_DEBUG(string msg) {
-        #ifdef log_DEBUG
-        cerr << Color::yellow << "log_DEBUG: " << Color::def << msg << endl;
+        #ifdef DEBUG
+        cerr << Color::yellow << "DEBUG: " << Color::def << msg << endl;
         #endif
     }
     void log_INFO(string msg) {
-        #ifdef log_INFO
-        cerr << Color::cyan << "log_INFO: " << Color::def << msg << endl;
+        #ifdef INFO
+        cerr << Color::cyan << "INFO: " << Color::def << msg << endl;
         #endif
+    }
+
+    vector<Instruction*> load_value(Value *value, Reg reg, label *lbl) {
+        if (value->isConst()) {
+            return value->gen_ir(lbl, reg);
+        }
+        auto out = value->gen_ir(lbl, R0);
+        Instruction::LOAD(out, reg, lbl);
+        return out;
     }
 
     /*========================================
@@ -42,11 +51,11 @@ namespace Imp {
     ========================================*/
 
     vector<Instruction*> Program::gen_ir(Imp::label *lbl, Imp::Reg reg) {
-        log_DEBUG("begin PROGRAM");
+
         decl->gen_ir(lbl, R0);
         vector<Instruction*> output = code->gen_ir(lbl, R1);
         output.push_back(Instruction::HALT(lbl));
-        log_DEBUG("end PROGRAM");
+
         return output;
     }
 
@@ -67,10 +76,10 @@ namespace Imp {
     */
     vector<Instruction*> Declarations::gen_ir(Imp::label *lbl, Imp::Reg reg) {
         // predeclare tmps
-        for(int i = 0; i < 5; i++) {
+        for(int i = 0; i < 4; i++) {
             symbols.declare_tmp("_TMP"+to_string(i));
         }
-        log_DEBUG("DECLARATIONS");
+        // log_DEBUG("DECLARATIONS");
         vector<Id*> vars;
         vector<Id*> iters;
         vector<Id*> arrays;
@@ -84,13 +93,13 @@ namespace Imp {
                 vars.push_back(id);
             }
         }
-        #ifdef log_DEBUG
-        ostringstream dbg;
-        dbg << "Variables: " << vars.size() << endl
-            << "Arrays: " << arrays.size() << endl
-            << "Iterators: " << iters.size() << endl;
-        log_DEBUG(db.str());
-        #endif
+        // #ifdef DEBUG
+        // ostringstream dbg;
+        // dbg << "Variables: " << vars.size() << endl
+        //     << "\tArrays: " << arrays.size() << endl
+        //     << "\tIterators: " << iters.size() << endl;
+        // log_DEBUG(dbg.str());
+        // #endif
         for (Id *id : vars) {
             if (!symbols.declare(id)) {
                 err_redeclaration("DECL", id);
@@ -124,13 +133,13 @@ namespace Imp {
 
     /* @done generate all teh commandses */
     vector<Instruction*> Commands::gen_ir(Imp::label *lbl, Imp::Reg reg) {
-        log_DEBUG("begin COMMANDS");
+
         vector<Instruction*> output;
         for(Command *cmd : cmds) {
             vector<Instruction*> cmd_out = cmd->gen_ir(lbl, R1);
             output.insert(output.end(), cmd_out.begin(), cmd_out.end());
         }
-        log_DEBUG("end COMMANDS");
+
         return output;
     }
 
@@ -140,7 +149,7 @@ namespace Imp {
 
     /* @done Assign a new value to a variable */
     vector<Instruction*> Assign::gen_ir(Imp::label *lbl, Imp::Reg reg) {
-        log_DEBUG("begin ASSIGN");
+
         vector<Instruction*> out;
         symbols.set_initialized(id);
         if (symbols.is_iterator(id)) {
@@ -154,10 +163,9 @@ namespace Imp {
             Instruction::LOAD(out, R1, lbl);
         }
 
-        vector<Instruction*> location = id->gen_ir(lbl, R0);
-        out.insert(out.end(), location.begin(), location.end());
+        insert_back(out, id->gen_ir(lbl, R0));
         Instruction::STORE(out, R1, lbl);
-        log_DEBUG("end ASSIGN");
+
         return out;
     }
 
@@ -207,7 +215,7 @@ namespace Imp {
     }
 
 
-    /*TODO*/
+    /*@done*/
     vector<Instruction*> For::gen_ir(Imp::label *lbl, Imp::Reg reg) {
         // for: <Id> iterator, <Value> from, to, <Commands> body
         vector<Instruction*> out;
@@ -225,6 +233,7 @@ namespace Imp {
             return out;
         }
         // TODO: check if body contains assignments to the iterator
+        // @done in Assign
 
         Symbol iter = symbols.get_var(iterator->name);
         symbols.set_initialized(iterator);
@@ -329,9 +338,7 @@ namespace Imp {
         symbols.set_initialized(id);
 
         vector<Instruction*> out;
-        auto id_addr = id->gen_ir(lbl, R0);
-        insert_back(out, id_addr);
-        // out.insert(out.end(), id_addr.begin(), id_addr.end());
+        insert_back(out, id->gen_ir(lbl, R0));
         Instruction::GET(out, reg, lbl);
         Instruction::STORE(out, reg, lbl);
         return out;
@@ -339,18 +346,17 @@ namespace Imp {
 
     /* @done Write value to the output */
     vector<Instruction*> Write::gen_ir(Imp::label *lbl, Imp::Reg reg) {
-        log_DEBUG("begin WRITE");
+
         vector<Instruction*> out;
         if (! check_init(val)) {
             return out;
         }
+        out = load_value(val, R1, lbl);
+        // insert_back(out, val->gen_ir(lbl, R0));
 
-        auto value_ref = val->gen_ir(lbl, reg);
-        insert_back(out, value_ref);
-        // out.insert(out.end(), value_ref.begin(), value_ref.end());
-        if(!val->isConst()) { Instruction::LOAD(out, reg, lbl); }
-        Instruction::PUT(out, reg, lbl);
-        log_DEBUG("end WRITE");
+        // if(!val->isConst()) { Instruction::LOAD(out, reg, lbl); }
+        Instruction::PUT(out, R1, lbl);
+
         return out;
     }
 
@@ -364,7 +370,9 @@ namespace Imp {
         if (! check_init(left)) {
             return vector<Instruction*>();
         }
-        return left->gen_ir(lbl, reg);
+        return load_value(left, reg, lbl);
+        // out = left->gen_ir(lbl, reg);
+
     };
 
     /* @done Calculate left+right, result in r1. */
@@ -376,28 +384,30 @@ namespace Imp {
         if (left->isConst() && right->isConst()) {
             // 2 compile-time constants: calculate value immediately
             number value = left->value + right->value;
-            out = generate_number(value < 0 ? 0 : value, reg, lbl);
+            out = generate_number(value < 0 ? 0 : value, R1, lbl);
         } else if (left->isConst() || right->isConst()) {
             // one constant
-            out = left->gen_ir(lbl, reg);
-            auto arg2 = right->gen_ir(lbl, reg);
-            out.insert(out.end(), arg2.begin(), arg2.end());
-            Instruction::ADD(out, reg, lbl);
-
+            auto constant = left->isConst() ? left : right;
+            auto variable = left->isConst() ? right : left;
+            if (constant->value == 1) {
+                insert_back(out, load_value(variable, R1, lbl));
+                Instruction::INC(out, R1, lbl);
+            } else {
+                out = constant->gen_ir(lbl, R1);
+                insert_back(out, variable->gen_ir(lbl, R0));
+                Instruction::ADD(out, R1, lbl);
+            }
         } else {
             // no constants
-            out = left->gen_ir(lbl, reg);
-            Instruction::LOAD(out, reg, lbl);
-
-            auto arg2 = right->gen_ir(lbl, reg);
-            out.insert(out.end(), arg2.begin(), arg2.end());
-            Instruction::ADD(out, reg, lbl);
-
+            out = left->gen_ir(lbl, R0);
+            Instruction::LOAD(out, R1, lbl);
+            insert_back(out, right->gen_ir(lbl, R0));
+            Instruction::ADD(out, R1, lbl);
         }
         return out;
     }
 
-    /* @done Calculate left - right, result in reg. */
+    /* @done Calculate left - right, result in R1. */
     vector<Instruction*> Minus::gen_ir(Imp::label *lbl, Imp::Reg reg) {
         vector<Instruction*> out;
         if (! (check_init(left) && check_init(right))) {
@@ -410,40 +420,35 @@ namespace Imp {
         } else if (left->isConst()) {
             // one constant
             out = left->gen_ir(lbl, reg);
-            auto arg2 = right->gen_ir(lbl, R0);
-            out.insert(out.end(), arg2.begin(), arg2.end());
+            insert_back(out, right->gen_ir(lbl, R0));
             Instruction::SUB(out, reg, lbl);
         } else if (right->isConst()) {
-            // create temp variable for the constant
-            // symbols.declare_tmp("_SUB");
+            // use a temporary variable for the constant
             auto tmp = symbols.get_var("_TMP0");
             out = generate_number(tmp.offset, R0, lbl);
-            Instruction::ZERO(out, R4, lbl);
-            Instruction::STORE(out, R4, lbl);
-            //
-            auto constant = right->gen_ir(lbl, reg);
-            out.insert(out.end(), constant.begin(), constant.end());
+            // clear tmp
+            Instruction::ZERO(out, reg, lbl);
             Instruction::STORE(out, reg, lbl);
 
-            // reg <- left
-            auto var = left->gen_ir(lbl, R0);
-            out.insert(out.end(), var.begin(), var.end());
+            insert_back(out, right->gen_ir(lbl, reg));
+
+            Instruction::STORE(out, reg, lbl);
+
+            // R1 <- left
+            insert_back(out, left->gen_ir(lbl, R0));
             Instruction::LOAD(out, reg, lbl);
 
-            auto tmp_addr = generate_number(tmp.offset, R0, lbl);
-            out.insert(out.end(), tmp_addr.begin(), tmp_addr.end());
+            insert_back(out, generate_number(tmp.offset, R0, lbl));
 
             Instruction::SUB(out, reg, lbl);
 
         } else {
             // no constants
-            out = left->gen_ir(lbl, reg);
+            out = left->gen_ir(lbl, R0);
             Instruction::LOAD(out, reg, lbl);
 
-            auto arg2 = right->gen_ir(lbl, reg);
-            out.insert(out.end(), arg2.begin(), arg2.end());
+            insert_back(out, right->gen_ir(lbl, R0));
             Instruction::SUB(out, reg, lbl);
-
         }
         return out;
     }
@@ -457,59 +462,130 @@ namespace Imp {
         if (left->isConst() && right->isConst()) {
             // 2 compile-time constants: calculate value immediately
             number value = left->value * right->value;
-            out = generate_number(value < 0 ? 0 : value, reg, lbl);
+            return generate_number(value < 0 ? 0 : value, R1, lbl);
         } else if (left->isConst() || right->isConst()) {
             Value *constant = left->isConst() ? left : right;
             Value *ref = left->isConst() ? right : left;
-            if (constant->value == 0) { out = generate_number(0, reg, lbl); }
+            if (constant->value == 0) { out = generate_number(0, R1, lbl); return out; }
+            else if (constant->value == 1) {
+                out = ref->gen_ir(lbl, R0);
+                Instruction::LOAD(out, R1, lbl);
+                return out;
+            }
             else {
+                log_DEBUG("Mult: var/const");
                 // one constant
                 // SHL then ADD or SUB, similar approach as in generate_number
                 number multiplier = 1;
                 number target = constant->value;
-                out = ref->gen_ir(lbl, reg);
-                Instruction::LOAD(out, reg, lbl);
+                out = ref->gen_ir(lbl, R0);
+                Instruction::LOAD(out, R1, lbl);
 
                 while (multiplier * 2 < target) {
-                    Instruction::SHL(out, reg, lbl);
+                    Instruction::SHL(out, R1, lbl);
                     multiplier *= 2;
                 }
                 if (multiplier * 2 - target < target - multiplier) {
                     // go down from multiplier * 2 to target
-                    Instruction::SHL(out, reg, lbl);
+                    Instruction::SHL(out, R1, lbl);
 
                     multiplier *= 2;
                     while (multiplier > target) {
-                        Instruction::SUB(out, reg, lbl);
+                        Instruction::SUB(out, R1, lbl);
                         multiplier--;
                     }
                 } else {
                     // go up
                     while (multiplier < target) {
-                        Instruction::ADD(out, reg, lbl);
+                        Instruction::ADD(out, R1, lbl);
                         multiplier++;
                     }
                 }
+                return out;
             }
-
         } else {
-            Instruction::ZERO(out, R1, lbl);
+            log_DEBUG("Mult: var/var");
+            log_DEBUG("var_left: name: " + left->id->name);
+            log_DEBUG("var_right: name: " + right->id->name);
+            // // old version: always generates left * right
+            // Instruction::ZERO(out, R1, lbl);
+            // auto left_ref = left->gen_ir(lbl, R0);
+            // out.insert(out.end(), left_ref.begin(), left_ref.end());
+            // Instruction::LOAD(out, R2, lbl);
 
-            auto left_ref = left->gen_ir(lbl, R0);
-            out.insert(out.end(), left_ref.begin(), left_ref.end());
+            // auto right_ref = right->gen_ir(lbl, R0);
+            // out.insert(out.end(), right_ref.begin(), right_ref.end());
+            // Instruction::LOAD(out, R3, lbl);
+
+            // Make sure we're generating smaller * larger
+
+            auto var_left = symbols.get_var(left->id->name);
+            auto var_right = symbols.get_var(right->id->name);
+
+            // insert_back(out, generate_number(var_left.offset, R2, lbl));
+            // insert_back(out, generate_number(var_right.offset, R3, lbl));
+            insert_back(out, left->gen_ir(lbl, R2));
+            insert_back(out, right->gen_ir(lbl, R3));
+
+            Instruction::COPY(out, R2, lbl);
+            Instruction::LOAD(out, R1, lbl);
+
+            Instruction::COPY(out, R3, lbl);
+            Instruction::SUB(out, R1, lbl);
+
+            /*
+                Ensure proper ordering of arguments.
+                Note: calculation is always R2 * R3.
+                Before:
+                    R1 = left - right.
+                    R2 = &left
+                    R3 = &right
+                After:
+                    R2 = smaller
+                    R3 = larger
+            */
+            auto select = Instruction::JZERO(R1, Instruction::NoArg, lbl);
+            out.push_back(select);
+            // R1 == 1: left > right -> calculate left * right (no swap)
+            /*
+                copy higer address, recreate lower
+                Before:
+                    R2 = &left
+                    R3 = &right
+                After:
+                    R2 <- right
+                    R3 <- left
+            */
+            if (var_left.offset > var_right.offset) {
+                Instruction::COPY(out, R2, lbl);
+                Instruction::LOAD(out, R3, lbl);
+                insert_back(out, right->gen_ir(lbl, R0));
+                Instruction::LOAD(out, R2, lbl);
+            } else {
+                Instruction::COPY(out, R3, lbl);
+                Instruction::LOAD(out, R2, lbl);
+                insert_back(out, left->gen_ir(lbl, R0));
+                Instruction::LOAD(out, R3, lbl);
+            }
+            auto select_end = Instruction::JUMP(Instruction::NoArg, lbl);
+            out.push_back(select_end);
+            // R1 == 0: left <= right -> calculate right * left (swap)
+            auto case_swap = *lbl;
+            select->arg2 = case_swap;
+            Instruction::COPY(out, R2, lbl);
             Instruction::LOAD(out, R2, lbl);
-
-            auto right_ref = right->gen_ir(lbl, R0);
-            out.insert(out.end(), right_ref.begin(), right_ref.end());
+            Instruction::COPY(out, R3, lbl);
             Instruction::LOAD(out, R3, lbl);
-            // if(!symbols.declare_tmp("_RIGHT")) {
-            //     cerr << "[ERROR] (internal) Unable to declare temporary variable" << endl;
-            //     exit(EXIT_FAILURE);
-            // }
+
+
+            auto after_select = *lbl;
+            select_end->arg2 = after_select;
+            // END select
+
+            // generate actual calculation
+            Instruction::ZERO(out, R1, lbl);
             auto tmp = symbols.get_var("_TMP0");
             insert_back(out, generate_number(tmp.offset, R0, lbl));
-            Instruction::ZERO(out, R4, lbl);
-            Instruction::STORE(out, R4, lbl);
 
             Instruction::STORE(out, R3, lbl);
 
@@ -527,28 +603,20 @@ namespace Imp {
             insert_back(out, generate_number(tmp.offset, R0, lbl));
             Instruction::ZERO(out, R3, lbl);
             Instruction::STORE(out, R3, lbl);
+            return out;
         }
-        return out;
     }
 
-    vector<Instruction*> load_value(Value *value, Reg reg, label *lbl) {
-        if (value->isConst()) {
-            return value->gen_ir(lbl, reg);
-        }
-            auto out = value->gen_ir(lbl, R0);
-            Instruction::LOAD(out, reg, lbl);
-            return out;
-    }
     /*TODO*/
     vector<Instruction*> Div::gen_ir(Imp::label *lbl, Imp::Reg reg) {
-        log_DEBUG("begin DIV");
+
         vector<Instruction*> out;
         if (! (check_init(left) && check_init(right))) {
             return out;
         }
         // 2 constants
         if (left->isConst() && right->isConst()) {
-            log_DEBUG("end DIV: const, const");
+
             if (right->value == 0) {
                 return generate_number(0, R1, lbl);
             }
@@ -562,7 +630,7 @@ namespace Imp {
             if (right->value == 1) {
                 out = left->gen_ir(lbl, R0);
                 Instruction::LOAD(out, R1, lbl);
-                log_DEBUG("end DIV: var, 1");
+
                 return out;
             } else if ((right->value & (right->value - 1)) == 0) {
                 // right is power of 2
@@ -573,7 +641,7 @@ namespace Imp {
                     Instruction::SHR(out, R1, lbl);
                     val /= 2;
                 }
-                log_DEBUG("end DIV: var, 2^n");
+
                 return out;
             }
         }
@@ -596,6 +664,7 @@ namespace Imp {
 
         // Wipe the fuck outta' temps
         Instruction::ZERO(out, R1, lbl);
+
         insert_back(out, generate_number(scaled.offset, R0, lbl));
         Instruction::STORE(out, R1, lbl);
         insert_back(out, generate_number(remain.offset, R0, lbl));
@@ -678,7 +747,7 @@ namespace Imp {
 
         insert_back(out, generate_number(result.offset, R0, lbl));
         Instruction::LOAD(out, R1, lbl);
-        log_DEBUG("end DIV");
+
         return out;
 
     }
@@ -690,19 +759,25 @@ namespace Imp {
             return out;
         }
         if (left->isConst() && right->isConst()) {
+            log_DEBUG("Modulo: 2 constants");
             return generate_number(left->value % left->value, R1, lbl);
         }
         if (right->isConst()) {
+            log_DEBUG("Modulo: right constant");
             if (right->value == 0) {
+                log_DEBUG("Modulo: right == 0");
                 Instruction::ZERO(out, R1, lbl);
                 return out;
             }
-            // if (right->value == 1) {
-            //     // out = left->gen_ir(lbl, R0);
-            //     Instruction::ZERO(out, R1, lbl);
-            //     Instruction::INC(out, R1, lbl);
-            //     return out;
-            // }
+            if (right->value == 2) {
+                log_DEBUG("Modulo: right == 2");
+                out = load_value(left, R2, lbl); //left->gen_ir(lbl, R0);
+                Instruction::ZERO(out, R1, lbl);
+                Instruction::JODD(out, R2, *lbl+2, lbl);
+                Instruction::JUMP(out, *lbl+2, lbl);
+                Instruction::INC(out, R1, lbl);
+                return out;
+            }
         }
 
         // if (! (symbols.declare_tmp("_SCALED")
@@ -723,6 +798,7 @@ namespace Imp {
 
         // Wipe the fuck outta' temps
         Instruction::ZERO(out, R1, lbl);
+
         insert_back(out, generate_number(scaled.offset, R0, lbl));
         Instruction::STORE(out, R1, lbl);
         insert_back(out, generate_number(remain.offset, R0, lbl));
@@ -966,13 +1042,13 @@ namespace Imp {
     /*========================================
         VARIABLES
     ========================================*/
-    /* @done reg = value || r0 = value */
+    /* @done reg = value || reg = &value */
     vector<Instruction*> Value::gen_ir(Imp::label *lbl, Imp::Reg reg) {
         vector<Instruction*> out;
         if (value != -1) {
             out = generate_number(value, reg, lbl);
         } else {
-            out = id->gen_ir(lbl, R0);
+            out = id->gen_ir(lbl, reg);
         }
         return out;
     }
@@ -1025,6 +1101,13 @@ namespace Imp {
 
     /* @done reg = &arr[idx] */
     vector<Instruction*> VarArray::gen_ir(Imp::label *lbl, Imp::Reg reg) {
+        ostringstream dbg;
+        dbg << "VarArray: " << name << "[" << idx->name << "], reg" << reg;
+        log_DEBUG(dbg.str());
+        if (reg == R4) {
+            cerr << Color::red << "Internal error: attempt to generate VarArray address in R4" << endl;
+            exit(EXIT_FAILURE);
+        }
         Symbol arr = symbols.get_var(name);
         vector<Instruction*> out;
         if (arr.line == Symbol::Undefined) {
@@ -1039,11 +1122,13 @@ namespace Imp {
             generator.report(os, line);
             return out;
         }
-        out = generate_number(arr.offset, R4, lbl);
-        auto idx_val = idx->gen_ir(lbl, R0);
-        out.insert(out.end(), idx_val.begin(), idx_val.end());
-        Instruction::ADD(out, R4, lbl);
-        Instruction::COPY(out, R4, lbl);
+        Imp::Reg tmp_reg = reg == R0 ? R4 : reg;
+        out = generate_number(arr.offset, tmp_reg, lbl);
+        insert_back(out, idx->gen_ir(lbl, R0));
+        Instruction::ADD(out, tmp_reg, lbl);
+        if (reg == R0) {
+            Instruction::COPY(out, R4, lbl);
+        }
         return out;
 
     }
@@ -1073,7 +1158,8 @@ namespace Imp {
             } else if (c == 'i') {
                 Instruction::INC(out, target_reg, lbl);
             } else {
-                cerr << " WTF just happened?!" << endl;
+                cerr << " Internal error: weird stuff happened while generating a constant" << endl;
+                exit(EXIT_FAILURE);
             }
         }
         return out;

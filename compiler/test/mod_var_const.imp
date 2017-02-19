@@ -2,16 +2,16 @@ VAR a b c
 BEGIN
 a := 10;
 c := a % 2;
-WRITE c;
+WRITE c; { 0 }
 
 a := 78*13;
 a := a+65;
 c := a % 78;
-WRITE c;
+WRITE c; { 65 }
 
 a := 120;
 b := a % 11;
-WRITE b;
+WRITE b; { 10 }
 
 
 END

@@ -3,8 +3,8 @@ BEGIN
 a := 4;
 b := a * 9;
 c := 9 * a;
-WRITE b;
-WRITE c;
+WRITE b; {36}
+WRITE c; {46}
 c := 0 * a;
-WRITE c;
+WRITE c; {0}
 END

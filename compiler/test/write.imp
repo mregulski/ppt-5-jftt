@@ -1,0 +1,27 @@
+VAR a c b[20] d e
+BEGIN
+	a := 2;
+	b[a] := 4;
+	b[1] := 3;
+	c := b[1] + b[2];
+	WRITE c;
+	c := b[1] * b[2];
+	WRITE c;
+	FOR i FROM 0 TO 19 DO
+		b[i] := i + 20;
+	ENDFOR
+	
+	a := 1;
+	c := 10;
+	b[a] := 11;
+	b[c] := 5;
+	d := 2;
+	WRITE 11111111;
+	WRITE b[a]; 	{ 11 }
+	WRITE b[c]; 	{ 5 }
+	WRITE d;		{ 2 }
+	e := b[c] * d;
+	WRITE e; 		{ 10 }
+	b[a] := b[c] * d;
+	WRITE b[a]; 	{ 10 }
+END

@@ -3,7 +3,7 @@
   101001000100001000001
 }
 VAR
-	a b
+	a b c
 BEGIN
 	READ a;
 	WHILE a > 0 DO

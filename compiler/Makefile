@@ -12,6 +12,7 @@ debug: build
 compiler: out_dir work_dir lex grammar
 	cp *.h $(WORK_DIR)/
 	$(COMPILE) $(WORK_DIR)/lex.yy.c $(WORK_DIR)/grammar.tab.c *.cpp -o $(OUT_DIR)/compiler -lfl $(DEBUG)
+	rm -rf $(WORK_DIR)
 
 interpreter: out_dir
 	$(COMPILE) example/interpreter.cc -o $(OUT_DIR)/interpreter $(DEBUG)

@@ -6,7 +6,7 @@ mkdir -p $out
 echo "========================================"
 echo "Test: $1"
 echo "========================================"
-bin/parser < $src > $out/$out_name.mr
+bin/compiler < $src > $out/$out_name.mr
 if [ $? -ne 0 ]; then
     echo -e "\e[31m========================================";
     echo "Compilation failed";

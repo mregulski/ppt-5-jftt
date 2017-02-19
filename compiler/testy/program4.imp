@@ -5,7 +5,7 @@
 > 
 }
 VAR
-  s[101] n m a j
+  s[101] n m a j cc
 BEGIN
     READ n;
     s[0]:=1;

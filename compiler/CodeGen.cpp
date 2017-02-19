@@ -19,6 +19,7 @@ namespace Imp {
             cerr << "Compilation" << Color::red << " failed: " << Color::def <<  n_error << " errors found." << endl;
             return false;
         } else {
+            #ifdef DEBUG
             cerr << Color::cyan << string(40, '=') << endl
                 << "\tSYMBOLS" << endl
                 << string(40, '=') << Color::def << endl;
@@ -28,10 +29,10 @@ namespace Imp {
                 << "\tOUTPUT" << endl
                 << string(40, '=') << Color::def << endl;
             cerr << "output size: " << code.size() << endl;
-
+            #endif
             for(int i = 0; i < code.size(); i++) {
                 // labels debug
-                #ifdef DEBUG
+                #ifdef DEBUG_LBL
                 cerr << code[i]->label << ". " << *code[i];
                 #endif
                 stream << *code[i];
