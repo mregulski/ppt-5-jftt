@@ -1,7 +1,7 @@
 # Formal Languages and Translation Techniques
 Wrocław University of Science and Technology, Faculty of Fundamental Problems of Technology, 2016/2017
 
-Class by Maciej Gębala, Ph. D.; [course webiste (in Polish)](http://ki.pwr.edu.pl/gebala/dyd/jftt2016.html)
+Class by Maciej Gębala, Ph. D. - [course webiste (in 🇵🇱)](http://ki.pwr.edu.pl/gebala/dyd/jftt2016.html)
 
 ## Contents
 * `1/`, `calc/`, `flexex/` - excercises
